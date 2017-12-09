@@ -1,0 +1,47 @@
+{
+  "name": "nymerus",
+  "version": "1.0.0",
+  "main": "./src/server.js",
+  "repository": "https://gitlab.com/alexandre-cariou/nymerus-reworked.git",
+  "author": "nymerus",
+  "license": "AGPL-1.0",
+  "dependencies": {
+    "bcrypt": "^1.0.3",
+    "generate-password": "^1.3.0",
+    "sequelize": "^4.15.0",
+    "socket.io": "^2.0.3",
+    "socket.io-client": "^2.0.4",
+    "sqlite": "^2.8.0",
+    "validate-password": "^1.0.4",
+    "winston": "^2.4.0",
+    "winston-logrotate": "^1.3.0"
+  },
+  "devDependencies": {
+    "babel-cli": "^6.26.0",
+    "babel-core": "^6.26.0",
+    "babel-eslint": "^8.0.1",
+    "babel-preset-env": "^1.6.1",
+    "babel-preset-flow": "^6.23.0",
+    "eslint": "^4.9.0",
+    "eslint-config-airbnb": "^16.1.0",
+    "eslint-plugin-flowtype": "^2.39.1",
+    "eslint-plugin-import": "^2.8.0",
+    "eslint-plugin-jsx-a11y": "^6.0.2",
+    "eslint-plugin-react": "^7.4.0",
+    "flow-bin": "^0.57.3"
+  },
+  "scripts": {
+    "start": "babel-node src/server.js",
+    "connection": "babel-node tests/connection.js",
+    "user": "babel-node tests/user.js",
+    "contact": "babel-node tests/contact.js",
+    "device": "babel-node tests/device.js",
+    "logs": "babel-node tests/logs.js",
+    "repo": "babel-node tests/repo.js"
+  },
+  "nymerus": {
+    "name": "nymerus-test",
+    "port": "3000",
+    "address": "http://127.0.0.1"
+  }
+}
