@@ -122,6 +122,7 @@ function get(client) {
               .then((repo) => {
                 const tmp = {
                   name: repo.name,
+                  id: repo.id,
                   isShared: repo.is_shared,
                 };
                 userRepos.push(tmp);
@@ -142,7 +143,7 @@ function get(client) {
 }
 
 function repoData(client, msg) {
-  if (!msg.name) {
+  if (!msg.id) {
     return emit.reject('repo.data', client, '400', 'invalid parameters');
   }
 
@@ -150,7 +151,7 @@ function repoData(client, msg) {
     .checkUserType(client.id, 'basic')
     .then(() => {
       db.repo
-        .findOne({ where: { name: msg.name } })
+        .findOne({ where: { id: msg.id } })
         .then((repo) => {
           if (!repo) {
             return emit.reject('repo.data', client, '400', 'can\'t find repo');
