@@ -122,6 +122,7 @@ function get(client) {
               .then((repo) => {
                 const tmp = {
                   name: repo.name,
+                  isShared: repo.is_shared,
                 };
                 userRepos.push(tmp);
                 i += 1;
@@ -177,6 +178,7 @@ function repoData(client, msg) {
                     if (i === len) {
                       myObj.id = repo.id;
                       myObj.name = repo.name;
+                      myObj.isShared = repo.is_shared;
                       myObj.members = members;
                       const post = 'data returned';
                       return emit.resolveWithData('repo.data', client, '200', post, myObj);

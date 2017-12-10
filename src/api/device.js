@@ -6,7 +6,7 @@ import * as emit from '../emit';
 
 function get(client) {
   security
-    .checkUserType(client.id, 'admin')
+    .checkUserType(client.id, 'basic')
     .then((data) => {
       db.device
         .findAll({ where: { user_id: data.id } })

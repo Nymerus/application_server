@@ -19,6 +19,9 @@ function upgrade(client, msg) {
       db.user
         .findOne({ where: { login: msg.login } })
         .then((user) => {
+          if (!user) {
+            return emit.reject('admin.upgrade', client, '400', 'user not found');
+          }
           if (user.id === data.id) {
             return emit.reject('admin.upgrade', client, '400', 'can\'t upgrade superadmin');
           }

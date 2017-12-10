@@ -172,7 +172,6 @@ function disconnect(client) {
   security
     .checkUserType(client.id, 'basic')
     .then((data) => {
-      if (!data) { return emit.reject('user.disconnect', client, '404', 'user not found'); }
       tokenManagement
         .remove(data.sessionId, data.id)
         .then(() => {
@@ -183,7 +182,7 @@ function disconnect(client) {
               return socket.closeOneSocket(client);
             })
             .catch(() => {
-              emit.reject('user.disconnect', client, '404', 'user not found');
+              emit.reject('user.disconnect', client, '500', 'user not found');
             });
         });
     })
@@ -226,7 +225,7 @@ function updatePassword(client, msg) {
           db.user
             .findOne({ where: { login: data.login } })
             .then((user) => {
-              if (!user) { emit.reject('user.updatePassword', client, '404', 'user not found'); }
+              if (!user) { emit.reject('user.updatePassword', client, '500', 'user not found'); }
               const checkPass = Bcrypt.compareSync(msg.password, user.password);
               if (checkPass === false) { return emit.reject('user.updatePassword', client, '403', 'wrong password'); }
               const hashedPassword = Bcrypt.hashSync(msg.newPassword, 10);
