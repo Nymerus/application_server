@@ -1,71 +1,104 @@
+// @flow
+import { appendFile, unlink, access, constants } from 'fs';
+import { execFile } from 'child_process';
+import { promisify } from 'util';
+
 // src files
 import * as dialogue from '../dialogue';
 import * as db from '../database';
 import * as security from '../security';
 import * as emit from '../emit';
 
-function create(client, msg) {
+const prExecFile = promisify(execFile);
+const prAppendFile = promisify(appendFile);
+const prUnlink = promisify(unlink);
+const prAccess = promisify(access);
+
+type Client = {
+  emit: (string, any) => any,
+  on: (string, (any) => any) => any,
+  id: string,
+};
+
+async function gitoliteUpdate(cl, chan, code, callback) {
+  const { err, stdout, stderr } = await prExecFile('/home/git/bin/gitolite', ['compile']);
+  if (stdout) console.log('prExecFile gitolite compile stdout', stdout);
+  if (stderr) console.log('prExecFile gitolite compile stderr', stderr);
+  if (err && stderr && stderr.indexOf('Bad file') === -1) {
+    return emit.reject(chan, cl, code, `[ERROR] \t erreur lors de la compile gitolite: ${err}\n`);
+  }
+
+  const { err: postErr, stdout: postStdout, stderr: postStderr } = await prExecFile(
+    '/home/git/bin/gitolite',
+    ['trigger', 'POST_COMPILE'],
+  );
+
+  if (postErr) {
+    return emit.reject(
+      chan,
+      cl,
+      code,
+      `[ERROR] \t erreur lors du déclanchement POST_COMPILE de gitolite: ${postErr}\n`,
+    );
+  }
+  if (postStdout) console.log(postStdout);
+  if (postStderr) console.log(postStderr);
+
+  callback();
+}
+
+async function create(client, msg) {
   if (!msg.name || !msg.path) {
     return emit.reject('repo.create', client, '400', 'invalid parameters');
   }
 
-  security
-    .checkUserType(client.id, 'basic')
-    .then((data) => {
-      db.repo
-        .findOne({ where: { name: msg.name, host: data.id } })
-        .then((repo) => {
-          if (repo) {
-            return emit.reject('repo.create', client, '400', 'repo name already used');
-          }
-          db.repo
-            .create({ name: msg.name, host: data.id, default_path: msg.path })
-            .then((newRepo) => {
-              db.repoMember
-                .create({ user_id: data.id, repo_id: newRepo.id, role: 'host' })
-                .then(() => {
-                  // create git repo here
-                  emit.resolve('repo.create', client, '200', 'repo created');
-                })
-                .catch(err => emit.reject('repo.create', client, '500', err));
-            })
-            .catch(err => emit.reject('repo.create', client, '500', err));
-        })
-        .catch(err => emit.reject('repo.create', client, '500', err));
-    })
-    .catch(err => emit.reject('repo.create', client, '401', err));
+  try {
+    const data = await security.checkUserType(client.id, 'basic');
+    const repo = await db.repo.findOne({ where: { name: msg.name, host: data.id } });
+
+    if (repo) return emit.reject('repo.create', client, '400', 'repo name already used');
+
+    const newRepo = await db.repo.create({ name: msg.name, host: data.id, default_path: msg.path });
+    await db.repoMember.create({ user_id: data.id, repo_id: newRepo.id, role: 'host' });
+
+    // creating repo
+    const text = `repo ${data.id}/${newRepo.id}\n    C\t=\t${data.id}\n    RW+\t=\t${
+      data.id
+    }\n    RW\t=\t${data.id}\n    R\t=\t${data.id}\n\n`;
+    console.log('########################', newRepo.id);
+
+    await prAppendFile(`/home/git/.gitolite/conf/${newRepo.id}.conf`, text);
+    gitoliteUpdate(client, 'repo.create', '500', () =>
+      emit.resolve('repo.create', client, '200', 'repo created'));
+  } catch (err) {
+    console.warn(err);
+    // emit.reject("repo.create", client, "401", err);
+    emit.reject('repo.create', client, '500', err);
+  }
 }
 
-function remove(client, msg) {
-  if (!msg.name) {
-    return emit.reject('repo.delete', client, '400', 'invalid parameters');
-  }
+async function remove(client, msg) {
+  if (!msg.name) return emit.reject('repo.delete', client, '400', 'invalid parameters');
 
-  security
-    .checkUserType(client.id, 'basic')
-    .then((data) => {
-      db.repo
-        .findOne({ where: { name: msg.name, host: data.id } })
-        .then((repo) => {
-          if (!repo) {
-            return emit.reject('repo.delete', client, '400', 'can\'t find repo');
-          }
-          repo
-            .destroy()
-            .then(() => {
-              db.repoMember
-                .destroy({ where: { repo_id: repo.id } })
-                .then(() => {
-                  // delete git repo here
-                  emit.resolve('repo.delete', client, '200', 'repo deleted');
-                })
-                .catch(err => emit.reject('repo.delete', client, '500', err));
-            })
-            .catch(err => emit.reject('repo.delete', client, '500', err));
-        })
-        .catch(err => emit.reject('repo.delete', client, '500', err));
-    })
-    .catch(err => emit.reject('repo.delete', client, '401', err));
+  try {
+    const data = await security.checkUserType(client.id, 'basic');
+    const repo = await db.repo.findOne({ where: { name: msg.name, host: data.id } });
+
+    if (!repo) return emit.reject('repo.delete', client, '400', "can't find repo");
+
+    await repo.destroy();
+    await db.repoMember.destroy({ where: { repo_id: repo.id } });
+
+    //  delete git repo here
+    await prUnlink(`/home/git/.gitolite/conf/${repo.id}.conf`);
+    console.log('err exist ???', err);
+    gitoliteUpdate(client, 'repo.delete', '519', () =>
+      emit.resolve('repo.delete', client, '200', 'repo deleted'));
+  } catch (err) {
+    console.warn(err);
+    // emit.reject("repo.delete", client, "401", err)
+    emit.reject('repo.delete', client, '500', err);
+  }
 }
 
 function rename(client, msg) {
@@ -80,7 +113,7 @@ function rename(client, msg) {
         .findOne({ where: { name: msg.name, host: data.id } })
         .then((repo) => {
           if (!repo) {
-            return emit.reject('repo.rename', client, '400', 'can\'t find repo');
+            return emit.reject('repo.rename', client, '400', "can't find repo");
           }
           db.repo
             .findOne({ where: { name: msg.newName } })
@@ -154,7 +187,7 @@ function repoData(client, msg) {
         .findOne({ where: { id: msg.id } })
         .then((repo) => {
           if (!repo) {
-            return emit.reject('repo.data', client, '400', 'can\'t find repo');
+            return emit.reject('repo.data', client, '400', "can't find repo");
           }
           const members = [];
           const myObj = {};
@@ -195,6 +228,67 @@ function repoData(client, msg) {
     .catch(err => emit.reject('repo.data', client, '401', err));
 }
 
+async function repoOneContent(client, msg: { id: string }) {
+  try {
+    await security.checkUserType(client.id, 'basic');
+    const repo = await db.repo.findOne({ where: { id: msg.id } });
+
+    if (!repo) return emit.reject('repo.content', client, '500', 'repo not found');
+
+    const { err } = await prAccess(`/home/git/repositories/${repo.host}`, constants.R_OK);
+    if (err) {
+      return emit.resolve(
+        'repo.content',
+        client,
+        '200',
+        `repo returned but void or other.. : ${err}`,
+      );
+    }
+
+    const { err: treeErr, stdout: treeOut, stderr: treeSErr } = await prExecFile(
+      '/usr/bin/git',
+      ['ls-tree', '-r', 'HEAD'],
+      { cwd: `/home/git/repositories/${repo.host}/${msg.id}.git` },
+    );
+    if (treeErr && treeSErr !== 'fatal: Not a valid object name HEAD\n') {
+      return emit.resolve(
+        'repo.content',
+        client,
+        '200',
+        `repo returned but no head or other..: ${treeErr}, ${treeSErr}`,
+      );
+    }
+
+    emit.resolveWithData('repo.content', client, '200', '', treeOut);
+  } catch (err) {
+    emit.reject('repo.content', client, '500', `repo.content err ${err}`);
+  }
+}
+
+async function repoAllContent(client) {
+  const data = await security.checkUserType(client.id, 'basic');
+  const repoList = await db.repoMember.findAll({ where: { user_id: data.id } });
+  const allContent = await repoList.reduce(async (acc, v) => {
+    const repo = await db.repo.findOne({ where: { id: v.repo_id } });
+    if (!repo) return acc;
+    const { err } = await prAccess(`/home/git/repositories/${repo.host}`, constants.R_OK);
+    if (err) return acc;
+    const { err: treeErr, stdout: treeOut, stderr: treeSErr } = await prExecFile(
+      '/usr/bin/git',
+      ['ls-tree', '-r', 'HEAD'],
+      { cwd: `/home/git/repositories/${repo.host}/${repo.id}.git` },
+    );
+    if (treeErr && treeSErr !== 'fatal: Not a valid object name HEAD\n') return acc;
+    acc.push({ ...repo, content: treeOut });
+  }, []);
+  emit.resolveWithData('content.get', client, '200', 'INPROGRESS', allContent);
+}
+
+function repoContent(client, msg) {
+  if (!msg.id) return repoAllContent(client);
+  return repoOneContent(client, msg);
+}
+
 function addMember(client, msg) {
   if (!msg.name || !msg.login) {
     return emit.reject('repo.addMember', client, '400', 'invalid parameters');
@@ -207,16 +301,22 @@ function addMember(client, msg) {
         .findOne({ where: { name: msg.name, host: data.id } })
         .then((repo) => {
           if (!repo) {
-            return emit.reject('repo.addMember', client, '400', 'can\'t find repo');
+            return emit.reject('repo.addMember', client, '400', "can't find repo");
           }
           db.user
             .findOne({ where: { login: msg.login } })
             .then((member) => {
               if (!member) {
-                return emit.reject('repo.addMember', client, '400', 'can\'t find member');
+                return emit.reject('repo.addMember', client, '400', "can't find member");
               }
               db.repoMember
-                .findOrCreate({ where: { user_id: member.id, repo_id: repo.id, role: 'member' } })
+                .findOrCreate({
+                  where: {
+                    user_id: member.id,
+                    repo_id: repo.id,
+                    role: 'member',
+                  },
+                })
                 .then(() => {
                   repo
                     .updateAttributes({ is_shared: true })
@@ -244,16 +344,21 @@ function deleteMember(client, msg) {
         .findOne({ where: { name: msg.name, host: data.id } })
         .then((repo) => {
           if (!repo) {
-            return emit.reject('repo.deleteMember', client, '400', 'can\'t find repo');
+            return emit.reject('repo.deleteMember', client, '400', "can't find repo");
           }
           db.user
             .findOne({ where: { login: msg.login } })
             .then((member) => {
               if (!member) {
-                return emit.reject('repo.deleteMember', client, '400', 'can\'t find member');
+                return emit.reject('repo.deleteMember', client, '400', "can't find member");
               }
               if (data.id === member.id) {
-                return emit.reject('repo.deleteMember', client, '400', 'can\'t delete host (it\'s you !)');
+                return emit.reject(
+                  'repo.deleteMember',
+                  client,
+                  '400',
+                  "can't delete host (it's you !)",
+                );
               }
               db.repoMember
                 .destroy({ where: { user_id: member.id, repo_id: repo.id } })
@@ -265,7 +370,8 @@ function deleteMember(client, msg) {
                       if (len === 1) {
                         repo
                           .updateAttributes({ is_shared: false })
-                          .then(() => emit.resolve('repo.deleteMember', client, '200', 'member deleted'))
+                          .then(() =>
+                            emit.resolve('repo.deleteMember', client, '200', 'member deleted'))
                           .catch(err => emit.reject('repo.deleteMember', client, '500', err));
                       } else {
                         return emit.resolve('repo.deleteMember', client, '200', 'member deleted');
@@ -282,15 +388,32 @@ function deleteMember(client, msg) {
     .catch(err => emit.reject('repo.deleteMember', client, '401', err));
 }
 
-export default function run(client) {
-  client.on('repo.create', (msg) => { create(client, dialogue.convert(msg)); });
-  client.on('repo.delete', (msg) => { remove(client, dialogue.convert(msg)); });
+export default function run(client: Client) {
+  client.on('repo.create', (msg) => {
+    create(client, dialogue.convert(msg));
+  });
+  client.on('repo.delete', (msg) => {
+    remove(client, dialogue.convert(msg));
+  });
 
-  client.on('repo.rename', (msg) => { rename(client, dialogue.convert(msg)); });
+  client.on('repo.rename', (msg) => {
+    rename(client, dialogue.convert(msg));
+  });
 
-  client.on('repo.get', () => { get(client); });
-  client.on('repo.data', (msg) => { repoData(client, dialogue.convert(msg)); });
+  client.on('repo.get', () => {
+    get(client);
+  });
+  client.on('repo.content', (msg) => {
+    repoContent(client, dialogue.convert(msg));
+  });
+  client.on('repo.data', (msg) => {
+    repoData(client, dialogue.convert(msg));
+  });
 
-  client.on('repo.addMember', (msg) => { addMember(client, dialogue.convert(msg)); });
-  client.on('repo.deleteMember', (msg) => { deleteMember(client, dialogue.convert(msg)); });
+  client.on('repo.addMember', (msg) => {
+    addMember(client, dialogue.convert(msg));
+  });
+  client.on('repo.deleteMember', (msg) => {
+    deleteMember(client, dialogue.convert(msg));
+  });
 }

@@ -1,0 +1,25 @@
+# web:
+#  build: ./web
+#  container_name: docker_web
+#  ports:
+#   - "80:8080" # http
+#   - "443:443" # secure socket.io & https
+#  volumes:
+#   - ../web_dev/app_web:/root/www
+#   - /root/www/node_modules
+#  links:
+#   - stockage
+#
+
+#PORTS=[HOST:CONTAINER]
+
+stockage:
+ build: ./stockage
+ container_name: nymerus_stockage
+ restart: always
+ ports:
+  - "8022:22" # ssh
+  - "3000:3000" # socket.io
+ volumes:
+  - ./:/home/git/data
+  - /home/git/data/node_modules

@@ -1,3 +1,4 @@
+// @flow
 // src files
 import * as dialogue from '../dialogue';
 import * as db from '../database';
@@ -50,7 +51,9 @@ function rename(client, msg) {
       db.device
         .findOne({ where: { session: msg.sessionId, user_id: data.id } })
         .then((device) => {
-          if (!device) { return emit.reject('device.rename', client, '404', 'not found'); }
+          if (!device) {
+            return emit.reject('device.rename', client, '404', 'not found');
+          }
           device
             .updateAttributes({ name: msg.name })
             .then(() => emit.resolve('device.rename', client, '200', 'device renamed'))
@@ -78,7 +81,13 @@ function remove(client, msg) {
 }
 
 export default function run(client) {
-  client.on('device.get', () => { get(client); });
-  client.on('device.rename', (msg) => { rename(client, dialogue.convert(msg)); });
-  client.on('device.delete', (msg) => { remove(client, dialogue.convert(msg)); });
+  client.on('device.get', () => {
+    get(client);
+  });
+  client.on('device.rename', (msg) => {
+    rename(client, dialogue.convert(msg));
+  });
+  client.on('device.delete', (msg) => {
+    remove(client, dialogue.convert(msg));
+  });
 }

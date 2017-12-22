@@ -1,3 +1,4 @@
+// @flow
 // src files
 import * as dialogue from '../dialogue';
 import * as db from '../database';
@@ -19,7 +20,9 @@ function add(client, msg) {
       db.user
         .findOne({ where: { login: msg.login } })
         .then((contact) => {
-          if (!contact) { return emit.reject('contact.add', client, '404', 'contact not found'); }
+          if (!contact) {
+            return emit.reject('contact.add', client, '404', 'contact not found');
+          }
           db.contact
             .findOrCreate({
               where: {
@@ -46,7 +49,9 @@ function remove(client, msg) {
       db.user
         .findOne({ where: { login: msg.login } })
         .then((contact) => {
-          if (!contact) { return emit.reject('contact.delete', client, '404', 'contact not found'); }
+          if (!contact) {
+            return emit.reject('contact.delete', client, '404', 'contact not found');
+          }
           db.contact
             .destroy({
               where: {
@@ -156,7 +161,11 @@ function search(client, msg) {
   }
 
   let myVal = '';
-  if (msg.value === '*') { myVal = '%'; } else { myVal = `%${msg.value}%`; }
+  if (msg.value === '*') {
+    myVal = '%';
+  } else {
+    myVal = `%${msg.value}%`;
+  }
 
   security
     .checkUserType(client.id, 'basic')
@@ -200,11 +209,21 @@ function search(client, msg) {
 }
 
 export default function run(client) {
-  client.on('contact.add', (msg) => { add(client, dialogue.convert(msg)); });
-  client.on('contact.delete', (msg) => { remove(client, dialogue.convert(msg)); });
+  client.on('contact.add', (msg) => {
+    add(client, dialogue.convert(msg));
+  });
+  client.on('contact.delete', (msg) => {
+    remove(client, dialogue.convert(msg));
+  });
 
-  client.on('contact.profile', (msg) => { profile(client, dialogue.convert(msg)); });
-  client.on('contact.get', () => { get(client); });
+  client.on('contact.profile', (msg) => {
+    profile(client, dialogue.convert(msg));
+  });
+  client.on('contact.get', () => {
+    get(client);
+  });
 
-  client.on('contact.search', (msg) => { search(client, dialogue.convert(msg)); });
+  client.on('contact.search', (msg) => {
+    search(client, dialogue.convert(msg));
+  });
 }

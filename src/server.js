@@ -1,5 +1,4 @@
-#!/usr/bin/env node
-
+// @flow
 // src files
 import * as database from './database';
 

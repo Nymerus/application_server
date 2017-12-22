@@ -1,3 +1,4 @@
+// @flow
 // src files
 import * as dialogue from '../dialogue';
 import * as db from '../database';
@@ -23,7 +24,7 @@ function upgrade(client, msg) {
             return emit.reject('admin.upgrade', client, '400', 'user not found');
           }
           if (user.id === data.id) {
-            return emit.reject('admin.upgrade', client, '400', 'can\'t upgrade superadmin');
+            return emit.reject('admin.upgrade', client, '400', "can't upgrade superadmin");
           }
           user
             .updateAttributes({ type: msg.type })
@@ -42,19 +43,21 @@ function connected(client) {
   security
     .checkUserType(client.id, 'admin')
     .then(() => {
-      userManagement
-        .get()
-        .then((connectedUsers) => {
-          const myObj = {};
-          myObj.connectedUsers = connectedUsers;
-          const post = 'connected users returned';
-          return emit.resolveWithData('admin.connected', client, '200', post, myObj);
-        });
+      userManagement.get().then((connectedUsers) => {
+        const myObj = {};
+        myObj.connectedUsers = connectedUsers;
+        const post = 'connected users returned';
+        return emit.resolveWithData('admin.connected', client, '200', post, myObj);
+      });
     })
     .catch(err => emit.reject('admin.connected', client, '401', err));
 }
 
 export default function run(client) {
-  client.on('admin.upgrade', (msg) => { upgrade(client, dialogue.convert(msg)); });
-  client.on('admin.connected', () => { connected(client); });
+  client.on('admin.upgrade', (msg) => {
+    upgrade(client, dialogue.convert(msg));
+  });
+  client.on('admin.connected', () => {
+    connected(client);
+  });
 }

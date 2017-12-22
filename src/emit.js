@@ -1,33 +1,48 @@
+// @flow
 // src files
-import * as dialogue from './dialogue';
+import * as dialogue from "./dialogue";
 
-function emit(channel, client, code) {
-  const message = {};
+type Client = {
+  emit: (string, any) => any,
+  on: (string, (any) => any) => any,
+  id: string
+};
 
-  message.code = code;
-
-  client.emit(channel, message);
+function emit(channel: string, client: Client, code: string) {
+  client.emit(channel, { code });
 }
 
-function emitWithData(channel, client, code, msg) {
-  const message = msg;
-
-  message.code = code;
-
-  client.emit(channel, message);
+function emitWithData(channel: string, client: Client, code: string, msg: {}) {
+  client.emit(channel, { data: msg, code });
 }
 
-export function resolve(channel, client, code, status) {
+export function resolve(
+  channel: string,
+  client: Client,
+  code: string,
+  status: any
+) {
   dialogue.debug(client, channel, status);
   emit(channel, client, code);
 }
 
-export function resolveWithData(channel, client, code, status, msg) {
+export function resolveWithData(
+  channel: string,
+  client: Client,
+  code: string,
+  status: any,
+  msg: {}
+) {
   dialogue.debug(client, channel, status);
   emitWithData(channel, client, code, msg);
 }
 
-export function reject(channel, client, code, status) {
+export function reject(
+  channel: string,
+  client: Client,
+  code: string,
+  status: any
+) {
   dialogue.error(client, channel, status);
   emit(channel, client, code);
 }
