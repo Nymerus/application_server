@@ -33,7 +33,7 @@ export function closeAllSockets() {
 // init and open all sockets
 export function run() {
   if (!config.nymerus.port) {
-    dialogue.server('error', 'socket', 'can\'t read server port');
+    dialogue.server('error', 'socket', "can't read server port");
   } else {
     const sockets = SocketIO(config.nymerus.port);
 
@@ -44,15 +44,15 @@ export function run() {
       routes.api(client);
       routes.errors(client);
 
-      setTimeout(() => {
-        // If the socket didn't authenticate, disconnect it
-        userManagement
-          .getUserDataFromClientId(client.id)
-          .catch(() => {
-            dialogue.server('info', 'socket', `client disconnected : ${client.id}`);
-            closeOneSocket(client);
-          });
-      }, 2000);
+      // setTimeout(() => {
+      //   // If the socket didn't authenticate, disconnect it
+      //   userManagement
+      //     .getUserDataFromClientId(client.id)
+      //     .catch(() => {
+      //       dialogue.server('info', 'socket', `client disconnected : ${client.id}`);
+      //       closeOneSocket(client);
+      //     });
+      // }, 2000);
 
       client.on('disconnect', () => {
         userManagement
