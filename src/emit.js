@@ -1,11 +1,11 @@
 // @flow
 // src files
-import * as dialogue from "./dialogue";
+import * as dialogue from './dialogue';
 
 type Client = {
   emit: (string, any) => any,
   on: (string, (any) => any) => any,
-  id: string
+  id: string,
 };
 
 function emit(channel: string, client: Client, code: string) {
@@ -13,15 +13,10 @@ function emit(channel: string, client: Client, code: string) {
 }
 
 function emitWithData(channel: string, client: Client, code: string, msg: {}) {
-  client.emit(channel, { data: msg, code });
+  client.emit(channel, { ...msg, code });
 }
 
-export function resolve(
-  channel: string,
-  client: Client,
-  code: string,
-  status: any
-) {
+export function resolve(channel: string, client: Client, code: string, status: any) {
   dialogue.debug(client, channel, status);
   emit(channel, client, code);
 }
@@ -31,18 +26,13 @@ export function resolveWithData(
   client: Client,
   code: string,
   status: any,
-  msg: {}
+  msg: {},
 ) {
   dialogue.debug(client, channel, status);
   emitWithData(channel, client, code, msg);
 }
 
-export function reject(
-  channel: string,
-  client: Client,
-  code: string,
-  status: any
-) {
+export function reject(channel: string, client: Client, code: string, status: any) {
   dialogue.error(client, channel, status);
   emit(channel, client, code);
 }

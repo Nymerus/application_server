@@ -9,7 +9,9 @@ export function addUser(userLogin) {
     db.user
       .findOne({ where: { login: userLogin } })
       .then((user) => {
-        if (!user) { reject(); }
+        if (!user) {
+          reject();
+        }
         user
           .updateAttributes({ authenticate: false })
           .then(() => {
@@ -28,7 +30,9 @@ export function delUser(userLogin) {
     db.user
       .findOne({ where: { login: userLogin } })
       .then((user) => {
-        if (!user) { reject(); }
+        if (!user) {
+          reject();
+        }
         user
           .updateAttributes({ authenticate: true })
           .then(() => {
@@ -49,11 +53,15 @@ export function genList() {
       .findAll({ where: { authenticate: false } })
       .then((users) => {
         const userNumber = Object.keys(users).length;
-        if (userNumber === 0) { resolve(); }
+        if (userNumber === 0) {
+          resolve();
+        }
         Object.keys(users).forEach((user, index) => {
           const tmpPass = security.passwordGenerator();
           passwordList[users[user].login] = tmpPass;
-          if (index === userNumber - 1) { resolve(); }
+          if (index === userNumber - 1) {
+            resolve();
+          }
         });
       })
       .catch(err => reject(err));
@@ -63,20 +71,25 @@ export function genList() {
 export function checkPassword(userLogin, password) {
   return new Promise((resolve, reject) => {
     const userNumber = Object.keys(passwordList).length;
-    if (userNumber === 0) { reject(); }
-    Object.keys(passwordList).forEach((user, index) => {
+    if (userNumber === 0) {
+      reject();
+    }
+    Object.keys(passwordList).forEach(async (user, index) => {
       if (user === userLogin) {
-        if (passwordList[user] === password) {
+        const p = await passwordList[user];
+        if (p === password) {
           resolve();
         } else {
           reject();
         }
       }
-      if (index === userNumber - 1) { reject(); }
+      if (index === userNumber - 1) {
+        reject();
+      }
     });
   });
 }
 
 export function getPass() {
-  return (passwordList);
+  return passwordList;
 }

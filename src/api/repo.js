@@ -1,7 +1,6 @@
 // @flow
 import { appendFile, unlink, access, constants } from 'fs';
 import { execFile } from 'child_process';
-import { promisify } from 'util';
 
 // src files
 import * as dialogue from '../dialogue';
@@ -9,10 +8,13 @@ import * as db from '../database';
 import * as security from '../security';
 import * as emit from '../emit';
 
-const prExecFile = promisify(execFile);
-const prAppendFile = promisify(appendFile);
-const prUnlink = promisify(unlink);
-const prAccess = promisify(access);
+const prExecFile = (url, args, opt?) =>
+  new Promise(res =>
+    execFile(url, args, opt, (error, stdout, stderr) => res({ error, stdout, stderr })));
+const prAppendFile = (url, text) =>
+  new Promise(res => appendFile(url, text, error => res({ error })));
+const prUnlink = url => new Promise(res => unlink(url, error => res({ error })));
+const prAccess = (url, mode) => new Promise(res => access(url, mode, error => res({ error })));
 
 type Client = {
   emit: (string, any) => any,
@@ -21,30 +23,39 @@ type Client = {
 };
 
 async function gitoliteUpdate(cl, chan, code, callback) {
-  const { err, stdout, stderr } = await prExecFile('/home/git/bin/gitolite', ['compile']);
-  if (stdout) console.log('prExecFile gitolite compile stdout', stdout);
-  if (stderr) console.log('prExecFile gitolite compile stderr', stderr);
-  if (err && stderr && stderr.indexOf('Bad file') === -1) {
-    return emit.reject(chan, cl, code, `[ERROR] \t erreur lors de la compile gitolite: ${err}\n`);
-  }
+  try {
+    const { error, stdout, stderr } = await prExecFile('/home/git/bin/gitolite', ['compile']);
+    if (stdout) console.log('prExecFile gitolite compile stdout', stdout);
+    if (stderr) console.log('prExecFile gitolite compile stderr', stderr);
+    if (error && stderr && stderr.indexOf('Bad file') === -1) {
+      return emit.reject(
+        chan,
+        cl,
+        code,
+        `[ERROR] \t erreur lors de la compile gitolite: ${error.toString()}\n`,
+      );
+    }
 
-  const { err: postErr, stdout: postStdout, stderr: postStderr } = await prExecFile(
-    '/home/git/bin/gitolite',
-    ['trigger', 'POST_COMPILE'],
-  );
-
-  if (postErr) {
-    return emit.reject(
-      chan,
-      cl,
-      code,
-      `[ERROR] \t erreur lors du déclanchement POST_COMPILE de gitolite: ${postErr}\n`,
+    const { error: postErr, stdout: postStdout, stderr: postStderr } = await prExecFile(
+      '/home/git/bin/gitolite',
+      ['trigger', 'POST_COMPILE'],
     );
-  }
-  if (postStdout) console.log(postStdout);
-  if (postStderr) console.log(postStderr);
 
-  callback();
+    if (postErr) {
+      return emit.reject(
+        chan,
+        cl,
+        code,
+        `[ERROR] \t erreur lors du déclanchement POST_COMPILE de gitolite: ${postErr.toString()}\n`,
+      );
+    }
+    if (postStdout) console.log(postStdout);
+    if (postStderr) console.log(postStderr);
+
+    callback();
+  } catch (e) {
+    emit.reject(chan, cl, code, `[ERROR] Catched lors de la compile gitolite: ${e}\n`);
+  }
 }
 
 async function create(client, msg) {
@@ -65,15 +76,12 @@ async function create(client, msg) {
     const text = `repo ${data.id}/${newRepo.id}\n    C\t=\t${data.id}\n    RW+\t=\t${
       data.id
     }\n    RW\t=\t${data.id}\n    R\t=\t${data.id}\n\n`;
-    console.log('########################', newRepo.id);
 
     await prAppendFile(`/home/git/.gitolite/conf/${newRepo.id}.conf`, text);
     gitoliteUpdate(client, 'repo.create', '500', () =>
-      emit.resolve('repo.create', client, '200', 'repo created'));
-  } catch (err) {
-    console.warn(err);
-    // emit.reject("repo.create", client, "401", err);
-    emit.reject('repo.create', client, '500', err);
+      emit.resolveWithData('repo.create', client, '200', 'repo created', { id: newRepo.id }));
+  } catch (e) {
+    emit.reject('repo.create', client, '500', e);
   }
 }
 
@@ -91,13 +99,10 @@ async function remove(client, msg) {
 
     //  delete git repo here
     await prUnlink(`/home/git/.gitolite/conf/${repo.id}.conf`);
-    console.log('err exist ???', err);
-    gitoliteUpdate(client, 'repo.delete', '519', () =>
+    gitoliteUpdate(client, 'repo.delete', '500', () =>
       emit.resolve('repo.delete', client, '200', 'repo deleted'));
-  } catch (err) {
-    console.warn(err);
-    // emit.reject("repo.delete", client, "401", err)
-    emit.reject('repo.delete', client, '500', err);
+  } catch (e) {
+    emit.reject('repo.delete', client, '500', e);
   }
 }
 
@@ -235,53 +240,69 @@ async function repoOneContent(client, msg: { id: string }) {
 
     if (!repo) return emit.reject('repo.content', client, '500', 'repo not found');
 
-    const { err } = await prAccess(`/home/git/repositories/${repo.host}`, constants.R_OK);
-    if (err) {
+    const { error } = await prAccess(`/home/git/repositories/${repo.host}`, constants.R_OK);
+    if (error) {
       return emit.resolve(
         'repo.content',
         client,
         '200',
-        `repo returned but void or other.. : ${err}`,
+        `repo returned but void or other.. : ${error}`,
       );
     }
 
-    const { err: treeErr, stdout: treeOut, stderr: treeSErr } = await prExecFile(
+    const { error: treeErr, stdout: treeOut, stderr: treeSErr } = await prExecFile(
       '/usr/bin/git',
       ['ls-tree', '-r', 'HEAD'],
       { cwd: `/home/git/repositories/${repo.host}/${msg.id}.git` },
     );
-    if (treeErr && treeSErr !== 'fatal: Not a valid object name HEAD\n') {
+    if (treeErr && treeSErr.toString() !== 'fatal: Not a valid object name HEAD\n') {
       return emit.resolve(
         'repo.content',
         client,
         '200',
-        `repo returned but no head or other..: ${treeErr}, ${treeSErr}`,
+        `repo returned but no head or other..: ${treeErr.toString()}, ${treeSErr.toString()}`,
       );
     }
 
-    emit.resolveWithData('repo.content', client, '200', '', treeOut);
-  } catch (err) {
-    emit.reject('repo.content', client, '500', `repo.content err ${err}`);
+    emit.resolveWithData('repo.content', client, '200', 'repository content.', {
+      content: treeOut,
+    });
+  } catch (e) {
+    emit.reject('repo.content', client, '500', `repo.content err ${e}`);
   }
 }
 
-async function repoAllContent(client) {
-  const data = await security.checkUserType(client.id, 'basic');
-  const repoList = await db.repoMember.findAll({ where: { user_id: data.id } });
-  const allContent = await repoList.reduce(async (acc, v) => {
+const eachContent = async (repoList) => {
+  const allContent = await Promise.all(repoList.map(async (v) => {
     const repo = await db.repo.findOne({ where: { id: v.repo_id } });
-    if (!repo) return acc;
-    const { err } = await prAccess(`/home/git/repositories/${repo.host}`, constants.R_OK);
-    if (err) return acc;
-    const { err: treeErr, stdout: treeOut, stderr: treeSErr } = await prExecFile(
+    if (!repo) return null;
+    const { error } = await prAccess(`/home/git/repositories/${repo.host}`, constants.R_OK);
+    if (error) return null;
+    const { error: execError, stderr, stdout } = await prExecFile(
       '/usr/bin/git',
       ['ls-tree', '-r', 'HEAD'],
       { cwd: `/home/git/repositories/${repo.host}/${repo.id}.git` },
     );
-    if (treeErr && treeSErr !== 'fatal: Not a valid object name HEAD\n') return acc;
-    acc.push({ ...repo, content: treeOut });
-  }, []);
-  emit.resolveWithData('content.get', client, '200', 'INPROGRESS', allContent);
+    if (execError || stderr || !stdout) return null;
+    return stdout;
+  }));
+  return allContent || null;
+};
+
+async function repoAllContent(client) {
+  try {
+    const data = await security.checkUserType(client.id, 'basic');
+    const repoList = await db.repoMember.findAll({ where: { user_id: data.id } });
+    const allContent = await eachContent(repoList);
+    if (allContent) {
+      return emit.resolveWithData('repo.content', client, '200', 'INPROGRESS', {
+        content: allContent,
+      });
+    }
+    return emit.reject('repo.content', client, '500', 'repo.content null');
+  } catch (e) {
+    emit.reject('repo.content', client, '500', `repo.content err ${e}`);
+  }
 }
 
 function repoContent(client, msg) {

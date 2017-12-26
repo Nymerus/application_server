@@ -22,16 +22,14 @@ RUN mkdir ~/.gitolite/keydir
 RUN gitolite compile
 RUN gitolite trigger POST_COMPILE
 RUN rm -rf repositories/gitolite-admin.git
-RUN echo 'include "*.conf"' > /home/git/.gitolite/conf/gitolite.conf
 RUN echo 'NoHostAuthenticationForLocalhost yes' >> ~/.ssh/config
 RUN git config --global user.email "nymerus@outlook.com"
 RUN git config --global user.name "nymerus"
-RUN echo "include \"*.conf\"" > $HOME/.gitolite/conf/gitolite.conf
+RUN echo "include \"*.conf\"\n$(cat $HOME/.gitolite/conf/gitolite.conf)" > $HOME/.gitolite/conf/gitolite.conf
 EXPOSE 3000
 EXPOSE 22
 
 USER root
-RUN su --preserve-environment -l git -c 'yarn -h'
 
 ENTRYPOINT chmod -R 777 /home/git/data && cd /home/git/data && su --preserve-environment -l git -c 'yarn && yarn start'
 CMD ["/usr/sbin/sshd", "-D"]

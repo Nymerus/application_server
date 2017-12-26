@@ -12,10 +12,16 @@ import * as tokenManager from './token';
 
 export function passwordValidation(password: string): Promise<any> {
   return new Promise((resolve, reject) => {
-    if (!password) { reject(new Error('empty password')); }
+    if (!password) {
+      reject(new Error('empty password'));
+    }
 
-    if (password.length < 8) { reject(new Error('password must be at least 8 characters in length')); }
-    if (password.length > 64) { reject(new Error('password must be at most 64 characters in length')); }
+    if (password.length < 8) {
+      reject(new Error('password must be at least 8 characters in length'));
+    }
+    if (password.length > 64) {
+      reject(new Error('password must be at most 64 characters in length'));
+    }
 
     const validator = new ValidatePassword();
     const passwordData = validator.checkPassword(password);
@@ -39,7 +45,9 @@ export function passwordGenerator(): Promise<string> {
       strict: true,
     });
 
-    if (!password) { reject(new Error('server internal error')); }
+    if (!password) {
+      reject(new Error('server internal error'));
+    }
 
     resolve(password);
   });
@@ -56,7 +64,9 @@ export function tokenGenerator(): Promise<string> {
       strict: true,
     });
 
-    if (!token) { reject(new Error('server internal error')); }
+    if (!token) {
+      reject(new Error('server internal error'));
+    }
 
     resolve(token);
   });

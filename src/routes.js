@@ -6,6 +6,7 @@ import contact from './api/contact';
 import device from './api/device';
 import repo from './api/repo';
 import admin from './api/admin';
+import data from './api/data';
 
 export function api(client) {
   user(client);
@@ -13,6 +14,7 @@ export function api(client) {
   device(client);
   repo(client);
   admin(client);
+  data(client);
 }
 
 export function errors(client) {

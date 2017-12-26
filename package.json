@@ -38,12 +38,14 @@
     "docker:build": "docker-compose build",
     "docker:clean": "docker-compose down",
     "docker:stop": "docker-compose stop",
+    "docker:restart": "docker-compose restart",
     "connection": "./node_modules/.bin/babel-node tests/connection.js",
     "user": "./node_modules/.bin/babel-node tests/user.js",
     "contact": "./node_modules/.bin/babel-node tests/contact.js",
     "device": "./node_modules/.bin/babel-node tests/device.js",
     "logs": "./node_modules/.bin/babel-node tests/logs.js",
-    "repo": "./node_modules/.bin/babel-node tests/repo.js"
+    "repo": "./node_modules/.bin/babel-node tests/repo.js",
+    "test:data": "./node_modules/.bin/babel-node tests/data.js"
   },
   "nymerus": {
     "name": "nymerus-test",
