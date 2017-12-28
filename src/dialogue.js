@@ -36,9 +36,13 @@ function getUserData(client: any) {
     userManagement
       .getUserDataFromClientId(client.id)
       .then((clientData) => {
-        resolve(`\x1b[37m\x1b[1m${clientData.login} on \x1b[36m\x1b[1m${clientData.sessionName}\x1b[0m(${clientData.sessionType}\x1b[0m)`);
+        resolve(`\x1b[37m\x1b[1m${clientData.login} on \x1b[36m\x1b[1m${clientData.sessionName}\x1b[0m(${
+          clientData.sessionType
+        }\x1b[0m)`);
       })
-      .catch(() => { reject(new Error(`\x1b[37m\x1b[1m[${client.id}]\x1b[0m`)); });
+      .catch(() => {
+        reject(new Error(`\x1b[37m\x1b[1m[${client.id}]\x1b[0m`));
+      });
   });
 }
 
@@ -107,7 +111,9 @@ export function test(channel: string, post: string) {
   emitToAdmins('info', getColored('test', '', channel), post);
 }
 
-export function convert(msg) {
-  if (typeof msg === 'string') { return JSON.parse(msg); }
+export function convert(msg: string | {}) {
+  if (typeof msg === 'string') {
+    return JSON.parse(msg);
+  }
   return msg;
 }

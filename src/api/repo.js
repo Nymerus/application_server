@@ -246,7 +246,7 @@ async function repoOneContent(client, msg: { id: string }) {
         'repo.content',
         client,
         '200',
-        `repo returned but void or other.. : ${error}`,
+        `repo returned but void or other.. : ${error.toString()}`,
       );
     }
 

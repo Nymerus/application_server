@@ -1,7 +1,6 @@
 // @flow
 // import { appendFile, unlink, access, constants } from 'fs';
 import { execFile } from 'child_process';
-import { promisify } from 'util';
 
 // src files
 import * as dialogue from '../dialogue';
@@ -9,16 +8,9 @@ import * as dialogue from '../dialogue';
 import * as security from '../security';
 import * as emit from '../emit';
 
-type retourExecFile = {
-  err: any,
-  stdout: string,
-  stderr: string,
-};
-
-const prExecFile: (string, any, any) => retourExecFile = promisify(execFile);
-// const prAppendFile = promisify(appendFile);
-// const prUnlink = promisify(unlink);
-// const prAccess = promisify(access);
+const prExecFile = (url, args, opt?) =>
+  new Promise(res =>
+    execFile(url, args, opt, (error, stdout, stderr) => res({ error, stdout, stderr })));
 
 type Client = {
   emit: (string, any) => any,
@@ -54,15 +46,20 @@ async function dataAdd(client, rawMsg) {
   try {
     const user: User = await security.checkUserType(client.id, 'basic');
     // check access to repo ???
-    const { err, stdout, stderr } = await prExecFile(
+    const { error, stdout, stderr } = await prExecFile(
       '/home/git/data/src/scripts/addFile.sh',
       [msg.data, '644', msg.path, `User ${user.login} add ${msg.path}.`],
       { cwd: `/home/git/repositories/${user.id}/${msg.id}.git` },
     );
-    if (err && err !== null && err !== 'null') {
-      return emit.reject('data.add', client, '500', `${err}, ${stderr}, ${stdout}`);
+    if (error && error.toString() !== null && error.toString() !== 'null') {
+      return emit.reject(
+        'data.add',
+        client,
+        '500',
+        `${error.toString()}, ${stderr.toString()}, ${stdout.toString()}`,
+      );
     }
-    emit.resolve('data.add', client, '200', `File ${msg.path} added, ${stdout}.`);
+    emit.resolve('data.add', client, '200', `File ${msg.path} added, ${stdout.toString()}.`);
   } catch (e) {
     emit.reject('data.add', client, '500', `Catched error: ${e}`);
   }
@@ -76,15 +73,20 @@ async function dataDel(client, rawMsg) {
   try {
     const user: User = await security.checkUserType(client.id, 'basic');
     // check access to repo ???
-    const { err, stdout, stderr } = prExecFile(
+    const { error, stdout, stderr } = await prExecFile(
       '/home/git/data/src/scripts/delFile.sh',
       [msg.path, `User ${user.login} deleted ${msg.path}.`],
       { cwd: `/home/git/repositories/${user.id}/${msg.id}.git` },
     );
-    if (err || stderr) {
-      return emit.reject('data.del', client, '500', `${err}, ${stderr}, ${stdout}`);
+    if (error || stderr) {
+      return emit.reject(
+        'data.del',
+        client,
+        '500',
+        `${error ? error.toString() : ''}, ${stderr.toString()}, ${stdout.toString()}`,
+      );
     }
-    emit.resolve('data.del', client, '200', `File ${msg.path} removed, ${stdout}.`);
+    emit.resolve('data.del', client, '200', `File ${msg.path} removed, ${stdout.toString()}.`);
   } catch (e) {
     emit.reject('data.del', client, '500', `Catched error: ${e}`);
   }
