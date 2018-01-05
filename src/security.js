@@ -39,7 +39,7 @@ export function passwordGenerator(): Promise<string> {
     const password: string = GeneratePassword.generate({
       length: 10,
       numbers: true,
-      symbols: true,
+      symbols: false,
       uppercase: true,
       excludeSimilarCharacters: true,
       strict: true,
@@ -58,7 +58,7 @@ export function tokenGenerator(): Promise<string> {
     const token: string = GeneratePassword.generate({
       length: 64,
       numbers: true,
-      symbols: true,
+      symbols: false,
       uppercase: true,
       excludeSimilarCharacters: true,
       strict: true,

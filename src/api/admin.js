@@ -5,6 +5,7 @@ import * as db from '../database';
 import * as security from '../security';
 import * as emit from '../emit';
 import * as userManagement from '../user_management';
+import * as ephemeral from '../ephemeral_password';
 
 function upgrade(client, msg) {
   if (!msg.login || !msg.type) {
@@ -53,11 +54,27 @@ function connected(client) {
     .catch(err => emit.reject('admin.connected', client, '401', err));
 }
 
+function getPasswords(client) {
+  security
+    .checkUserType(client.id, 'superadmin')
+    .then(() => {
+      const myObj = {};
+      const pass = ephemeral.getPass();
+      myObj.passwords = pass;
+      const post = 'temp passwords returned';
+      return emit.resolveWithData('admin.getPasswords', client, '200', post, myObj);
+    })
+    .catch(err => emit.reject('admin.getPasswords', client, '401', err));
+}
+
 export default function run(client) {
   client.on('admin.upgrade', (msg) => {
     upgrade(client, dialogue.convert(msg));
   });
   client.on('admin.connected', () => {
     connected(client);
+  });
+  client.on('admin.getPasswords', () => {
+    getPasswords(client);
   });
 }
