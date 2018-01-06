@@ -5,6 +5,8 @@ import Bcrypt from 'bcrypt';
 import * as dialogue from './dialogue';
 import * as db from './database';
 
+import img from '../img.json';
+
 export function createAdminIfNotExist() {
   return new Promise((resolve, reject) => {
     db.user
@@ -16,7 +18,7 @@ export function createAdminIfNotExist() {
             .create({
               login: 'superadmin',
               email: 'superadmin@nymerus.com',
-              icon: 'no-icon',
+              icon: img.default,
               password: hashedPassword,
               type: 'superadmin',
               authenticate: true,
