@@ -15,9 +15,13 @@ export function addUser(userLogin) {
         user
           .updateAttributes({ authenticate: false })
           .then(() => {
-            const tmpPass = security.passwordGenerator();
-            passwordList[userLogin] = tmpPass;
-            resolve(tmpPass);
+            security
+              .passwordGenerator()
+              .then((tmpPass) => {
+                passwordList[userLogin] = tmpPass;
+                resolve(tmpPass);
+              })
+              .catch(() => reject());
           })
           .catch(() => reject());
       })
@@ -57,11 +61,15 @@ export function genList() {
           resolve();
         }
         Object.keys(users).forEach((user, index) => {
-          const tmpPass = security.passwordGenerator();
-          passwordList[users[user].login] = tmpPass;
-          if (index === userNumber - 1) {
-            resolve();
-          }
+          security
+            .passwordGenerator()
+            .then((tmpPass) => {
+              passwordList[users[user].login] = tmpPass;
+              if (index === userNumber - 1) {
+                resolve();
+              }
+            })
+            .catch(err => reject(err));
         });
       })
       .catch(err => reject(err));

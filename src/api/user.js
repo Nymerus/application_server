@@ -253,7 +253,22 @@ function updatePassword(client, msg) {
               }
               const checkPass = Bcrypt.compareSync(msg.password, user.password);
               if (checkPass === false) {
-                return emit.reject('user.updatePassword', client, '403', 'wrong password');
+                ephemeral
+                  .checkPassword(user.login, msg.password)
+                  .then(() => {
+                    const hashedPassword = Bcrypt.hashSync(msg.newPassword, 10);
+                    user
+                      .updateAttributes({
+                        password: hashedPassword,
+                        authenticate: true,
+                      })
+                      .then(() => {
+                        emit.resolve('user.updatePassword', client, '200', 'password updated');
+                        return userManagement.disconnectUser(data.id);
+                      })
+                      .catch(err => emit.reject('user.updatePassword', client, '500', err));
+                  })
+                  .catch(() => emit.reject('user.updatePassword', client, '403', 'wrong password'));
               }
               const hashedPassword = Bcrypt.hashSync(msg.newPassword, 10);
               user
