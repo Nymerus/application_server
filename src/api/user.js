@@ -11,7 +11,6 @@ import * as userManagement from '../user_management';
 import * as ephemeral from '../ephemeral_password';
 import * as tokenManagement from '../token';
 import * as socket from '../socket';
-import * as img from '../default-img';
 
 import img from '../../img.json';
 
