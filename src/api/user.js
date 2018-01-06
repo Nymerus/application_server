@@ -297,12 +297,17 @@ function updateIcon(client, msg) {
   security
     .checkUserType(client.id, 'basic')
     .then((data) => {
-      data
-        .updateAttributes({ icon: msg.icon })
-        .then(() => {
-          emit.resolve('user.updateIcon', client, '200', 'icon updated');
+      db.user
+        .findOne({ where: { login: data.login } })
+        .then((user) => {
+          user
+            .updateAttributes({ icon: msg.icon })
+            .then(() => {
+              emit.resolve('user.updateIcon', client, '200', 'icon updated');
+            })
+            .catch(err => emit.reject('user.updateIcon', client, '500', err));
         })
-        .catch(err => emit.reject('user.updateIcon', client, '500', err));
+        .catch(err => emit.reject('user.updateIcon', client, '404', err));
     })
     .catch(err => emit.reject('user.updateIcon', client, '401', err));
 }
