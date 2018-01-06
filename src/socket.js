@@ -14,6 +14,7 @@ export function closeOneSocket(client) {
   if (Object.prototype.hasOwnProperty.call(clientsList, client.id) === false) {
     return false;
   }
+  client.emit('user.disconnect', { code: '200' });
   clientsList[client.id].disconnect();
   return true;
 }
