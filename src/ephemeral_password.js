@@ -76,7 +76,7 @@ export function genList() {
   });
 }
 
-export function checkPassword(userLogin, password) {
+export function checkPassword(userLogin, password, del) {
   return new Promise((resolve, reject) => {
     const userNumber = Object.keys(passwordList).length;
     if (userNumber === 0) {
@@ -84,8 +84,9 @@ export function checkPassword(userLogin, password) {
     }
     Object.keys(passwordList).forEach(async (user, index) => {
       if (user === userLogin) {
-        const p = await passwordList[user];
+        const p = passwordList[user];
         if (p === password) {
+          if (del === true) { delete passwordList[user]; }
           resolve();
         } else {
           reject();

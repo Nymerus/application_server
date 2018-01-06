@@ -11,6 +11,9 @@ import * as userManagement from '../user_management';
 import * as ephemeral from '../ephemeral_password';
 import * as tokenManagement from '../token';
 import * as socket from '../socket';
+import * as img from '../default-img';
+
+import img from '../../img.json';
 
 function create(client, msg) {
   if (!msg.login || !msg.email || !msg.icon) {
@@ -24,13 +27,17 @@ function create(client, msg) {
         .passwordGenerator()
         .then((password) => {
           const hashedPassword = Bcrypt.hashSync(password, 10);
+          const myObj = {
+            login: msg.login,
+            email: msg.email,
+            icon: msg.icon,
+            password: hashedPassword,
+          };
+          if (myObj.icon === 'no-icon') {
+            myObj.icon = img.default;
+          }
           db.user
-            .create({
-              login: msg.login,
-              email: msg.email,
-              icon: msg.icon,
-              password: hashedPassword,
-            })
+            .create(myObj)
             .then((usr) => {
               ephemeral
                 .addUser(usr.login)
@@ -254,7 +261,7 @@ function updatePassword(client, msg) {
               const checkPass = Bcrypt.compareSync(msg.password, user.password);
               if (checkPass === false) {
                 ephemeral
-                  .checkPassword(user.login, msg.password)
+                  .checkPassword(user.login, msg.password, true)
                   .then(() => {
                     const hashedPassword = Bcrypt.hashSync(msg.newPassword, 10);
                     user

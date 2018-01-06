@@ -95,7 +95,7 @@ export function authenticate(msg: any, user: any): Promise<string> {
   return new Promise((resolve, reject) => {
     if (user.authenticate === false) {
       ephemeral
-        .checkPassword(user.login, msg.password)
+        .checkPassword(user.login, msg.password, false)
         .then(() => resolve())
         .catch(() => reject(new Error('400')));
     } else if (msg.token === true) {
