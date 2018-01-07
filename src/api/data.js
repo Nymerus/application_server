@@ -59,7 +59,7 @@ async function dataAdd(client, rawMsg) {
         `${error.toString()}, ${stderr.toString()}, ${stdout.toString()}`,
       );
     }
-    emit.resolve('data.add', client, '200', `File ${msg.path} added, ${stdout.toString()}.`);
+    emit.resolveWithData('data.add', client, '200', `File ${msg.path} added, ${stdout.toString()}.`, { id: msg.id });
   } catch (e) {
     emit.reject('data.add', client, '500', `Catched error: ${e}`);
   }
@@ -86,7 +86,7 @@ async function dataDel(client, rawMsg) {
         `${error ? error.toString() : ''}, ${stderr.toString()}, ${stdout.toString()}`,
       );
     }
-    emit.resolve('data.del', client, '200', `File ${msg.path} removed, ${stdout.toString()}.`);
+    emit.resolveWithData('data.del', client, '200', `File ${msg.path} removed, ${stdout.toString()}.`, { id: msg.id });
   } catch (e) {
     emit.reject('data.del', client, '500', `Catched error: ${e}`);
   }

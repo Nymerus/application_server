@@ -266,6 +266,7 @@ async function repoOneContent(client, msg: { id: string }) {
 
     emit.resolveWithData('repo.content', client, '200', 'repository content.', {
       content: treeOut,
+      id: msg.id,
     });
   } catch (e) {
     emit.reject('repo.content', client, '500', `repo.content err ${e}`);
