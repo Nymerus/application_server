@@ -46,7 +46,7 @@ function rename(client, msg) {
   }
 
   security
-    .checkUserType(client.id, 'admin')
+    .checkUserType(client.id, 'basic')
     .then((data) => {
       db.device
         .findOne({ where: { session: msg.sessionId, user_id: data.id } })
@@ -70,7 +70,7 @@ function remove(client, msg) {
   }
 
   security
-    .checkUserType(client.id, 'admin')
+    .checkUserType(client.id, 'basic')
     .then((data) => {
       db.device
         .destroy({ where: { session: msg.sessionId, user_id: data.id } })
