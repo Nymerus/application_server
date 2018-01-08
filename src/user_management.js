@@ -18,7 +18,7 @@ export function get() {
         id: connectedUsers[user].id,
         type: connectedUsers[user].type,
         login: connectedUsers[user].login,
-        session: user,
+        session: connectedUsers[user].sessionId,
       };
       uConnected.push(tmp);
       if (index === userNumber - 1) { resolve(uConnected); }
@@ -34,7 +34,7 @@ export function getClient() {
     Object.keys(connectedUsers).forEach((user, index) => {
       const tmp = {
         id: connectedUsers[user].id,
-        session: user,
+        session: connectedUsers[user].sessionId,
         client: connectedUsers[user].client,
       };
       uConnected.push(tmp);
@@ -75,6 +75,7 @@ export function newConnectedUser(userClient, user, msg) {
       login: user.login,
       sessionName: msg.sessionName,
       sessionType: msg.sessionType,
+      sessionId: msg.sessionId,
       client: userClient,
     };
     resolve();
