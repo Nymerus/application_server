@@ -68,7 +68,6 @@ export function newConnectedUser(userClient, user, msg) {
       }
     }
 
-    console.log(`msg.sessionId: ${msg.sessionId}`);
     connectedUsers[msg.sessionId] = {
       id: user.id,
       type: user.type,
