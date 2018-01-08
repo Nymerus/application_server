@@ -49,7 +49,6 @@ export function getUserDataFromClientId(clientId) {
     if (userNumber === 0) { reject(); }
     Object.keys(connectedUsers).forEach((user, index) => {
       if (connectedUsers[user].client.id === clientId) {
-        connectedUsers[user].sessionId = user;
         resolve(connectedUsers[user]);
       }
       if (index === userNumber - 1) { reject(); }
