@@ -18,7 +18,7 @@ export function get() {
         id: connectedUsers[user].id,
         type: connectedUsers[user].type,
         login: connectedUsers[user].login,
-        session: connectedUsers[user].sessionId,
+        session: connectedUsers[user].session,
       };
       uConnected.push(tmp);
       if (index === userNumber - 1) { resolve(uConnected); }
