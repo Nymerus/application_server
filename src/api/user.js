@@ -337,7 +337,7 @@ function updateLogin(client, msg) {
             .then(() => {
               userManagement
                 .update(user.login, 'login', msg.data)
-                .then(() => emit.resolve('user.updateLogin', client, '200', 'login updated'));
+                .then(() => emit.resolveWithData('user.updateLogin', client, '200', 'login updated', { newLogin: msg.data }));
             })
             .catch(err => emit.reject('user.updateLogin', client, '500', err));
         })
