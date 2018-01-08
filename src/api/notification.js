@@ -16,7 +16,7 @@ export function toAll(client, msg) {
       userManagement.getClient().then((connectedUsers) => {
         Object.keys(connectedUsers).forEach((user, index) => {
           if (data.session !== connectedUsers[index].session) {
-            console.log(`data session : ${data}, connectedUsers[index].session : ${connectedUsers[index].session}`);
+            console.log(`data session : ${data.session}, connectedUsers[index].session : ${connectedUsers[index].session}`);
             emit.resolve('notification.toAll', connectedUsers[index].client, msg.code, msg.post);
           }
         });
