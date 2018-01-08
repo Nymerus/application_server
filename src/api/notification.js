@@ -10,12 +10,15 @@ export function toAll(client, msg) {
     return emit.reject('notification.toAll', client, '400', 'invalid parameters');
   }
 
+  dialogue.debug('toAll reçue');
+
   security
     .checkUserType(client.id, 'basic')
     .then((data) => {
       userManagement.getClient().then((connectedUsers) => {
         Object.keys(connectedUsers).forEach((user, index) => {
           if (data.session !== connectedUsers[index].session) {
+            dialogue.debug('toAll to ', connectedUsers[index].id);
             emit.resolve('notification.toAll', connectedUsers[index].client, msg.code, msg.post);
           }
         });
