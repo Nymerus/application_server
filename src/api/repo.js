@@ -163,6 +163,7 @@ function get(client) {
                   id: repo.id,
                   isShared: repo.is_shared,
                 };
+                if (repo.host === data.id) { tmp.isHost = true; } else { tmp.isHost = false; }
                 userRepos.push(tmp);
                 i += 1;
                 if (i === len) {

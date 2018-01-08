@@ -18,6 +18,24 @@ export function get() {
         id: connectedUsers[user].id,
         type: connectedUsers[user].type,
         login: connectedUsers[user].login,
+        session: user,
+      };
+      uConnected.push(tmp);
+      if (index === userNumber - 1) { resolve(uConnected); }
+    });
+  });
+}
+
+export function getClient() {
+  return new Promise((resolve) => {
+    const userNumber = Object.keys(connectedUsers).length;
+    const uConnected = [];
+    if (userNumber === 0) { resolve(uConnected); }
+    Object.keys(connectedUsers).forEach((user, index) => {
+      const tmp = {
+        id: connectedUsers[user].id,
+        session: user,
+        client: connectedUsers[user].client,
       };
       uConnected.push(tmp);
       if (index === userNumber - 1) { resolve(uConnected); }
