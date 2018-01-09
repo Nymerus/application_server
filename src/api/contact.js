@@ -202,14 +202,9 @@ function search(client, msg) {
                     connected: false,
                     contact: false,
                   };
-                  userManagement
-                    .connected(contact.login)
-                    .then(() => { tmp.connected = true; })
-                    .finally(() => {
-                      isAContact(data.id, contact.id)
-                        .then(() => { tmp.contact = true; })
-                        .finally(() => { userContacts.push(tmp); });
-                    });
+                  userManagement.connected(contact.login).then(() => { tmp.connected = true; });
+                  isAContact(data.id, contact.id).then(() => { tmp.contact = true; });
+                  userContacts.push(tmp);
                 }
                 i += 1;
                 if (i === len) {
