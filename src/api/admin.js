@@ -30,7 +30,7 @@ function upgrade(client, msg) {
           user
             .updateAttributes({ type: msg.type })
             .then(() => {
-              emit.resolve('user.upgrade', client, '200', 'user upgraded');
+              emit.resolve('admin.upgrade', client, '200', 'user upgraded');
               return userManagement.disconnectUser(user.id);
             })
             .catch(err => emit.reject('admin.upgrade', client, '500', err));
