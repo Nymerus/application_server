@@ -188,8 +188,11 @@ function search(client, msg) {
               .then((contact) => {
                 if (data.login !== contact.login) {
                   const tmp = {
+                    id: contact.id,
                     login: contact.login,
+                    connected: false,
                   };
+                  userManagement.connected(contact.login).then(() => { tmp.connected = true; });
                   userContacts.push(tmp);
                 }
                 i += 1;
