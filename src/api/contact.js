@@ -155,6 +155,15 @@ function get(client) {
     .catch(err => emit.reject('contact.get', client, '401', err));
 }
 
+function isAContact(userId, contactId) {
+  return new Promise((resolve, reject) => {
+    db.contact
+      .findOne({ where: { user_id: userId, contact_id: contactId } })
+      .then((res) => { if (res) { resolve(); } else { reject(); } })
+      .catch(() => reject());
+  });
+}
+
 function search(client, msg) {
   if (!msg.value) {
     return emit.reject('contact.search', client, '400', 'invalid parameters');
@@ -191,8 +200,10 @@ function search(client, msg) {
                     id: contact.id,
                     login: contact.login,
                     connected: false,
+                    contact: false,
                   };
                   userManagement.connected(contact.login).then(() => { tmp.connected = true; });
+                  isAContact(data.id, contact.id).then(() => { tmp.contact = true; });
                   userContacts.push(tmp);
                 }
                 i += 1;
