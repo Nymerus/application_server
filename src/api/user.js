@@ -1,7 +1,9 @@
 // @flow
 // node modules
 import Bcrypt from 'bcrypt';
-import { mkdir } from 'fs';
+import { appendFile, unlink, access, constants, mkdir, writeFile } from 'fs';
+import { execFile } from 'child_process';
+
 // src files
 import * as dialogue from '../dialogue';
 import * as db from '../database';
@@ -13,6 +15,50 @@ import * as tokenManagement from '../token';
 import * as socket from '../socket';
 
 import img from '../../img.json';
+
+
+const prExecFile = (url, args, opt?) =>
+  new Promise(res =>
+    execFile(url, args, opt, (error, stdout, stderr) => res({ error, stdout, stderr })));
+
+const prWriteFile = (path, data) =>
+  new Promise(res => writeFile(path, data, error => res({ error })));
+
+async function gitoliteUpdate(cl, chan, code, callback) {
+  try {
+    const { error, stdout, stderr } = await prExecFile('/home/git/bin/gitolite', ['compile']);
+    if (stdout) console.log('prExecFile gitolite compile stdout', stdout);
+    if (stderr) console.log('prExecFile gitolite compile stderr', stderr);
+    if (error && stderr && stderr.indexOf('Bad file') === -1) {
+      return emit.reject(
+        chan,
+        cl,
+        code,
+        `[ERROR] \t erreur lors de la compile gitolite: ${error.toString()}\n`,
+      );
+    }
+
+    const { error: postErr, stdout: postStdout, stderr: postStderr } = await prExecFile(
+      '/home/git/bin/gitolite',
+      ['trigger', 'POST_COMPILE'],
+    );
+
+    if (postErr) {
+      return emit.reject(
+        chan,
+        cl,
+        code,
+        `[ERROR] \t erreur lors du déclanchement POST_COMPILE de gitolite: ${postErr.toString()}\n`,
+      );
+    }
+    if (postStdout) console.log(postStdout);
+    if (postStderr) console.log(postStderr);
+
+    callback();
+  } catch (e) {
+    emit.reject(chan, cl, code, `[ERROR] Catched lors de la compile gitolite: ${e}\n`);
+  }
+}
 
 function create(client, msg) {
   if (!msg.login || !msg.email || !msg.icon) {
@@ -370,7 +416,24 @@ function updateEmail(client, msg) {
     .catch(err => emit.reject('user.updateEmail', client, '401', err));
 }
 
+async function updateKey(client, msg) {
+  try {
+    const { key, device } = msg;
+    if (!key || !device) return emit.reject('user.updateKey', client, '400', 'invalid parameters');
+    const { id } = await security.checkUserType(client.id, 'basic');
+    const { error } = await prWriteFile(`/home/git/.gitolite/keydir/${id}/${id}@${device}.pub`, key);
+    if (error) return emit.reject('user.updateKey', client, '500', error.toString());
+    gitoliteUpdate(client, 'user.updateKey', '500', () =>
+      emit.resolve('user.updateKey', client, '200', 'Key added'));
+  } catch (e) {
+    return emit.reject('user.updateKey', client, '500', e);
+  }
+}
+
 export default function run(client) {
+  client.on('user.updateKey', (msg) => {
+    updateKey(client, msg);
+  });
   client.on('user.create', (msg) => {
     create(client, dialogue.convert(msg));
   });
