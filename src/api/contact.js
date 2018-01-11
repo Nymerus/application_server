@@ -199,9 +199,8 @@ function search(client, msg) {
                   const tmp = {
                     id: contact.id,
                     login: contact.login,
-                    connected: false,
                   };
-                  userManagement.connected(contact.login).then(() => { tmp.connected = true; });
+                  userManagement.connected(contact.login).then(() => { tmp.connected = true; }).catch(() => { tmp.connected = false; });
                   isAContact(data.id, contact.id).then(() => { tmp.contact = true; }).catch(() => { tmp.contact = false; });
                   userContacts.push(tmp);
                 }
