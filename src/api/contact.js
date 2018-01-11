@@ -202,9 +202,11 @@ function search(client, msg) {
                     connected: false,
                     contact: false,
                   };
-                  userManagement.connected(contact.login).then(() => { tmp.connected = true; });
-                  isAContact(data.id, contact.id).then(() => { tmp.contact = true; });
-                  userContacts.push(tmp);
+                  try {
+                    userManagement.connected(contact.login).then(() => { tmp.connected = true; });
+                    isAContact(data.id, contact.id).then(() => { tmp.contact = true; });
+                    userContacts.push(tmp);
+                  } catch (e) { dialogue.debug(e); }
                 }
                 i += 1;
                 if (i === len) {
