@@ -53,7 +53,7 @@ async function dataGet(client: any, rawMsg: any) {
     );
     if (error || stderr) return emit.reject('data.get', client, '500', `Catched error: ${error || stderr}`);
     console.log('stdout', stdout);
-    const { error: err, data } = prReadFile(`${path}/latest.zip`);
+    const { error: err, data } = await prReadFile(`${path}/latest.zip`);
     if (err) return emit.reject('data.get', client, '500', `Catched error: ${error}`);
     emit.resolveWithData('data.get', client, '200', 'Sending data from readfile.', { data });
   } catch (e) {
