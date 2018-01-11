@@ -1,4 +1,7 @@
 // @flow
+// node modules
+import Bcrypt from 'bcrypt';
+
 // src files
 import * as dialogue from '../dialogue';
 import * as db from '../database';
@@ -67,6 +70,41 @@ function getPasswords(client) {
     .catch(err => emit.reject('admin.getPasswords', client, '401', err));
 }
 
+function resetPassword(client, msg) {
+  if (!msg.login) {
+    return emit.reject('admin.resetPassword', client, '400', 'invalid parameters');
+  }
+
+  security
+    .checkUserType(client.id, 'superadmin')
+    .then(() => {
+      db.user
+        .findOne({ where: { login: msg.login } })
+        .then((user) => {
+          ephemeral
+            .addUser(user.login)
+            .then((pass) => {
+              const hashedPassword = Bcrypt.hashSync(pass, 10);
+              user
+                .updateAttributes({
+                  password: hashedPassword,
+                  authenticate: true,
+                })
+                .then(() => {
+                  const myObj = {};
+                  myObj.password = pass;
+                  const post = 'temp password returned';
+                  return emit.resolveWithData('admin.resetPassword', client, '200', post, myObj);
+                })
+                .catch(err => emit.reject('admin.resetPassword', client, '500', err));
+            })
+            .catch(err => emit.reject('admin.resetPassword', client, '500', err));
+        })
+        .catch(err => emit.reject('admin.resetPassword', client, '500', err));
+    })
+    .catch(err => emit.reject('admin.resetPassword', client, '401', err));
+}
+
 export default function run(client) {
   client.on('admin.upgrade', (msg) => {
     upgrade(client, dialogue.convert(msg));
@@ -76,5 +114,8 @@ export default function run(client) {
   });
   client.on('admin.getPasswords', () => {
     getPasswords(client);
+  });
+  client.on('admin.resetPassword', (msg) => {
+    resetPassword(client, dialogue.convert(msg));
   });
 }
