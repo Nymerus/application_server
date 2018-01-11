@@ -12,9 +12,9 @@ const prExecFile = (url, args, opt?) =>
   new Promise(res =>
     execFile(url, args, opt, (error, stdout, stderr) => res({ error, stdout, stderr })));
 
-const prReadFile = (url, args, opt?) =>
+const prReadFile = (url) =>
   new Promise(res =>
-    readFile(url, args, opt, (error, data) => res({ error, data })));
+    readFile(url, (error, data) => res({ error, data })));
 
 type Client = {
   emit: (string, any) => any,
