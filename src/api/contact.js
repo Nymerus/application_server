@@ -194,7 +194,7 @@ function search(client, msg) {
           for (let c = 0; contacts[c]; c += 1) {
             db.user
               .findOne({ where: { id: contacts[c].id } })
-              .then((contact) => {
+              .then(async (contact) => {
                 if (data.login !== contact.login) {
                   const tmp = {
                     id: contact.id,
