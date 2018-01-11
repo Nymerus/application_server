@@ -16,7 +16,6 @@ const prReadFile = (url, args, opt?) =>
   new Promise(res =>
     readFile(url, args, opt, (error, data) => res({ error, data })));
 
-
 type Client = {
   emit: (string, any) => any,
   on: (string, (any) => any) => any,
