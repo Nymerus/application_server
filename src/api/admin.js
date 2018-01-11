@@ -81,6 +81,7 @@ function resetPassword(client, msg) {
       db.user
         .findOne({ where: { login: msg.login } })
         .then((user) => {
+          if (!user) { return emit.reject('admin.resetPassword', client, '404', 'user not found'); }
           ephemeral
             .addUser(user.login)
             .then((pass) => {
