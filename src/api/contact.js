@@ -194,19 +194,16 @@ function search(client, msg) {
           for (let c = 0; contacts[c]; c += 1) {
             db.user
               .findOne({ where: { id: contacts[c].id } })
-              .then(async (contact) => {
+              .then((contact) => {
                 if (data.login !== contact.login) {
                   const tmp = {
                     id: contact.id,
                     login: contact.login,
                     connected: false,
-                    contact: false,
                   };
-                  try {
-                    userManagement.connected(contact.login).then(() => { tmp.connected = true; });
-                    isAContact(data.id, contact.id).then(() => { tmp.contact = true; });
-                    userContacts.push(tmp);
-                  } catch (e) { dialogue.debug(e); }
+                  userManagement.connected(contact.login).then(() => { tmp.connected = true; });
+                  isAContact(data.id, contact.id).then(() => { tmp.contact = true; }).catch(() => { tmp.contact = false; });
+                  userContacts.push(tmp);
                 }
                 i += 1;
                 if (i === len) {
