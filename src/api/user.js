@@ -24,6 +24,12 @@ const prExecFile = (url, args, opt?) =>
 const prWriteFile = (path, data) =>
   new Promise(res => writeFile(path, data, error => res({ error })));
 
+const prAccess = path =>
+  new Promise(res =>
+    access(path, constants.R_OK | constants.W_OK, error => res({ error })));
+
+const prMkdir = path => new Promise(res => mkdir(path, error => res({ error })));
+
 async function gitoliteUpdate(cl, chan, code, callback) {
   try {
     const { error, stdout, stderr } = await prExecFile('/home/git/bin/gitolite', ['compile']);
@@ -421,6 +427,11 @@ async function updateKey(client, msg) {
     const { key, device } = msg;
     if (!key || !device) return emit.reject('user.updateKey', client, '400', 'invalid parameters');
     const { id } = await security.checkUserType(client.id, 'basic');
+    const { error: errorUserKeydir } = await prAccess(`/home/git/.gitolite/keydir/${id}/`);
+    if (errorUserKeydir) {
+      const { error: failedUserKeyDir } = await prMkdir(`/home/git/.gitolite/keydir/${id}/`);
+      if (failedUserKeyDir) return emit.reject('user.updateKey', client, '500', failedUserKeyDir.toString());
+    }
     const { error } = await prWriteFile(`/home/git/.gitolite/keydir/${id}/${id}@${device}.pub`, key);
     if (error) return emit.reject('user.updateKey', client, '500', error.toString());
     gitoliteUpdate(client, 'user.updateKey', '500', () =>
