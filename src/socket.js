@@ -54,7 +54,18 @@ export function run() {
       //       closeOneSocket(client);
       //     });
       // }, 2000);
-
+      client.on('disconnecting', () => {
+        userManagement
+          .disconnectUserWithClientId(client.id)
+          .then(() => {
+            delete clientsList[client.id];
+            dialogue.server('info', 'socket', `client disconnected : ${client.id}`);
+          })
+          .catch(() => {
+            delete clientsList[client.id];
+            dialogue.server('info', 'socket', `client disconnected : ${client.id}`);
+          });
+      });
       client.on('disconnect', () => {
         userManagement
           .disconnectUserWithClientId(client.id)
