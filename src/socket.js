@@ -36,7 +36,7 @@ export function run() {
   if (!config.nymerus.port) {
     dialogue.server('error', 'socket', "can't read server port");
   } else {
-    const sockets = SocketIO(config.nymerus.port);
+    const sockets = SocketIO(config.nymerus.port, { pingTimeout: 30000 });
 
     sockets.on('connection', (client) => {
       clientsList[client.id] = client;
