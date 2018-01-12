@@ -77,16 +77,15 @@ async function dataAdd(client, rawMsg) {
       [msg.data, '644', msg.path, `User ${user.login} add ${msg.path}.`],
       { cwd: `/home/git/repositories/${user.id}/${msg.id}.git` },
     );
-    console.log('error', error ? error.toString() : null, 'stdout', stdout ? stdout.toString() : null, 'stderr', stderr ? stderr.toString() : null);
     if (error || stderr) {
       return emit.reject(
         'data.add',
         client,
         '500',
-        `${error.toString()}, ${stderr.toString()}, ${stdout.toString()}`,
+        `${error}, ${stderr}, ${stdout}`,
       );
     }
-    emit.resolveWithData('data.add', client, '200', `File ${msg.path} added, ${stdout.toString()}.`, { id: msg.id });
+    emit.resolveWithData('data.add', client, '200', `File ${msg.path} added, ${stdout}.`, { id: msg.id });
   } catch (e) {
     emit.reject('data.add', client, '500', `Catched error: ${e}`);
   }
@@ -110,10 +109,10 @@ async function dataDel(client, rawMsg) {
         'data.del',
         client,
         '500',
-        `${error ? error.toString() : ''}, ${stderr.toString()}, ${stdout.toString()}`,
+        `${error}, ${stderr}, ${stdout}`,
       );
     }
-    emit.resolveWithData('data.del', client, '200', `File ${msg.path} removed, ${stdout.toString()}.`, { id: msg.id });
+    emit.resolveWithData('data.del', client, '200', `File ${msg.path} removed, ${stdout}.`, { id: msg.id });
   } catch (e) {
     emit.reject('data.del', client, '500', `Catched error: ${e}`);
   }
