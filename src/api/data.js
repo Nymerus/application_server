@@ -77,7 +77,7 @@ async function dataAdd(client, rawMsg) {
       [msg.data, '644', msg.path, `User ${user.login} add ${msg.path}.`],
       { cwd: `/home/git/repositories/${user.id}/${msg.id}.git` },
     );
-    if (error || stderr) {
+    if (error || (stderr && !(stderr.includes('use --empty')))) {
       return emit.reject(
         'data.add',
         client,
@@ -104,7 +104,7 @@ async function dataDel(client, rawMsg) {
       [msg.path, `User ${user.login} deleted ${msg.path}.`],
       { cwd: `/home/git/repositories/${user.id}/${msg.id}.git` },
     );
-    if (error || stderr) {
+    if (error || (stderr && !(stderr.includes('use --empty')))) {
       return emit.reject(
         'data.del',
         client,
