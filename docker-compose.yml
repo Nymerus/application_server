@@ -16,7 +16,7 @@
 stockage:
  build: ./stockage
  container_name: nymerus_stockage
- restart: always
+ restart: on-failure:3
  ports:
   - "8022:22" # ssh
   - "3000:3000" # socket.io
