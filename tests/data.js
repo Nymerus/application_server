@@ -1,8 +1,7 @@
-#!/usr/bin/env node
-
+// @flow
 // node modules
 import SocketIO from 'socket.io-client';
-
+import { readFileSync, writeFile } from 'fs';
 // src files
 import config from '../package.json';
 
@@ -26,6 +25,12 @@ const content = id =>
     socket.once('repo.content', res);
   });
 
+const getRepo = id =>
+  new Promise((res) => {
+    socket.emit('data.get', { id });
+    socket.once('data.get', res);
+  });
+
 const delFolder = id =>
   new Promise((res) => {
     socket.emit('data.del', { id, path: 'folder0/' });
@@ -40,7 +45,7 @@ const delFile = id =>
 
 const createFile = id =>
   new Promise((res) => {
-    socket.emit('data.add', { id, path: 'folder1/toto' });
+    socket.emit('data.add', { id, path: 'folder1/toto.docx', data: readFileSync('tests/d.docx') });
     socket.once('data.add', res);
   });
 
@@ -132,6 +137,9 @@ async function run() {
     await createFile(repo.id);
     const content0 = await content(repo.id);
     const allContent = await content();
+    const zip = await getRepo(repo.id);
+    console.log(typeof zip.data);
+    writeFile('repo.zip', zip.data);
     console.log('0', content0, allContent);
     await delFile(repo.id);
     const content1 = await content(repo.id);

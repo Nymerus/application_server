@@ -1,20 +1,27 @@
 // @flow
-// import { appendFile, unlink, access, constants } from 'fs';
+
 import { execFile } from 'child_process';
-import { readFile } from 'fs';
+import { readFile, unlink } from 'fs';
 // src files
 import * as dialogue from '../dialogue';
 // import * as db from '../database';
 import * as security from '../security';
 import * as emit from '../emit';
 
-const prExecFile = (url, args, opt?) =>
+const prExecFile = (url: string, args: any, opt?: any) =>
   new Promise(res =>
     execFile(url, args, opt, (error, stdout, stderr) => res({ error, stdout, stderr })));
 
 const prReadFile = (url) =>
   new Promise(res =>
     readFile(url, (error, data) => res({ error, data })));
+
+const prExecFileStdin = (url: string, args: any, opt?: any, stdin: any) =>
+    new Promise(res => {
+      const c = execFile(url, args, opt, (error, stdout, stderr) => res({ error, stdout, stderr }));
+      c.stdin.write(stdin);
+      c.stdin.end();
+    });
 
 type Client = {
   emit: (string, any) => any,
@@ -45,16 +52,24 @@ async function dataGet(client: any, rawMsg: any) {
   try {
     const user: User = await security.checkUserType(client.id, 'basic');
     if (!user) return emit.reject('data.get', client, '400', 'Invalid parameters.');
-    const path = `/home/git/repositories/${user.id}/${msg.id}.git`;
+    const cwd = `/home/git/repositories/${user.id}/${msg.id}.git`;
     const { error, stdout, stderr } = await prExecFile(
       'git',
       ['archive', '-o', 'latest.zip', 'HEAD'],
-      { cwd: `/home/git/repositories/${user.id}/${msg.id}.git` },
+      { cwd: cwd },
+    );
+    if (error || stderr) return emit.reject(
+      'data.get',
+      client, '500',
+      `Catched error: ${
+        error ? error.toString() : '' ||
+        stderr ? stderr.toString() : ''
+      }`
     );
     if (error || stderr) return emit.reject('data.get', client, '500', `Catched error: ${error || stderr}`);
-    console.log('stdout', stdout);
-    const { error: err, data } = await prReadFile(`${path}/latest.zip`);
-    if (err) return emit.reject('data.get', client, '500', `Catched error: ${error}`);
+    const { error: err, data } = await prReadFile(`${cwd}/latest.zip`);
+    unlink(`${cwd}/latest.zip`, () => undefined);
+    if (err) return emit.reject('data.get', client, '500', `Catched error: ${err.toString()}`);
     emit.resolveWithData('data.get', client, '200', 'Sending data from readfile.', { data });
   } catch (e) {
     emit.reject('data.get', client, '500', `Catched error: ${e}`);
@@ -67,25 +82,155 @@ async function dataAdd(client, rawMsg) {
   }
   const msg = { ...rawMsg };
   if (msg.path[msg.path.length - 1] === '/') msg.path += '.init'; // path is folder ? add .init
-  if (!msg.data) msg.data = ''; // data undefined ? data = ''
+  if (!msg.data) msg.data = 'no-empty-data'; // data undefined ? data = ''
 
   try {
     const user: User = await security.checkUserType(client.id, 'basic');
     // check access to repo ???
-    const { error, stdout, stderr } = await prExecFile(
-      '/home/git/data/src/scripts/addFile.sh',
-      [msg.data, '644', msg.path, `User ${user.login} add ${msg.path}.`],
-      { cwd: `/home/git/repositories/${user.id}/${msg.id}.git` },
+    const cwd = `/home/git/repositories/${user.id}/${msg.id}.git`;
+
+    const showRef = await prExecFile('git', ['show-ref', '-s', 'master'], { cwd });
+    let readTree = {};
+    if (showRef.stdout) {
+      readTree = await prExecFile('git', [
+        'read-tree',
+        showRef.stdout.toString().replace('\n', '')
+      ], { cwd });
+    } else {
+      readTree = await prExecFile('git', ['read-tree', '--empty'], { cwd });
+    }
+    console.log('readtree',JSON.stringify(readTree));
+    if (readTree.error) return emit.reject(
+      'data.add',
+      client,
+      '500',
+      `${
+        readTree.error ? readTree.error.toString() : ''
+      }, ${
+        readTree.stderr ? readTree.stderr.toString() : ''
+      }, ${
+        readTree.stdout ? readTree.stdout.toString() : ''
+      }`,
     );
-    if (error || (stderr && !(stderr.includes('use --empty')))) {
+
+    const hashObject = await prExecFileStdin('git', [
+      'hash-object',
+      '-w',
+      '--stdin'
+    ], { cwd }, msg.data);
+    console.log('hash',JSON.stringify(hashObject));
+    if (hashObject.error || hashObject.stderr || !hashObject.stdout) {
       return emit.reject(
         'data.add',
         client,
         '500',
-        `${error}, ${stderr}, ${stdout}`,
+        `${
+          hashObject.error ? hashObject.error.toString() : ''
+        }, ${
+          hashObject.stderr ? hashObject.stderr.toString() : ''
+        }, ${
+          hashObject.stdout ? hashObject.stdout.toString() : ''
+        }`,
       );
     }
-    emit.resolveWithData('data.add', client, '200', `File ${msg.path} added, ${stdout}.`, { id: msg.id });
+    const updateIndex = await prExecFile('git', [
+      'update-index',
+      '--add',
+      '--cacheinfo',
+      '644',
+      hashObject.stdout.replace('\n', ''),
+      msg.path
+    ], { cwd });
+    console.log('u index',JSON.stringify(updateIndex));
+    if (updateIndex.error || updateIndex.stderr) {
+      return emit.reject(
+        'data.add',
+        client,
+        '500',
+        `${
+          updateIndex.error ? updateIndex.error.toString() : ''
+        }, ${
+          updateIndex.stderr ? updateIndex.stderr.toString() : ''
+        }, ${
+          updateIndex.stdout ? updateIndex.stdout.toString() : ''
+        }`,
+      );
+    }
+
+    const writeTree = await prExecFile('git', ['write-tree'], { cwd });
+    console.log('writeTree',JSON.stringify(writeTree));
+    if (writeTree.error || writeTree.stderr || !writeTree.stdout) {
+      return emit.reject(
+        'data.add',
+        client,
+        '500',
+        `${
+          writeTree.error ? writeTree.error.toString() : ''
+        }, ${
+          writeTree.stderr ? writeTree.stderr.toString() : ''
+        }, ${
+          writeTree.stdout ? writeTree.stdout.toString() : ''
+        }`,
+      );
+    }
+
+    let commitTree = {};
+    const commitMessage = `User ${user.login} add ${msg.path}.`;
+    if (showRef.stdout) {
+      commitTree = await prExecFile('git', [
+        'commit-tree',
+        writeTree.stdout.toString().replace('\n', ''),
+        '-p',
+        showRef.stdout.toString().replace('\n', ''),
+        '-m',
+        commitMessage
+      ], { cwd });
+    } else {
+      commitTree = await prExecFile('git', [
+        'commit-tree',
+        writeTree.stdout.toString().replace('\n', ''),
+        '-m',
+        commitMessage
+      ], { cwd });
+    }
+    console.log('commit',JSON.stringify(commitTree));
+    if (commitTree.error || commitTree.stderr || !commitTree.stdout) {
+      return emit.reject(
+        'data.add',
+        client,
+        '500',
+        `${
+          commitTree.error ? commitTree.error.toString() : ''
+        }, ${
+          commitTree.stderr ? commitTree.stderr.toString() : ''
+        }, ${
+          commitTree.stdout ? commitTree.stdout.toString() : ''
+        }`,
+      );
+    }
+
+    const updateRef = await prExecFile('git', [
+      'update-ref',
+      'refs/heads/master',
+      commitTree.stdout.toString().replace('\n', ''),
+      showRef.stdout.toString().replace('\n', '')
+    ], { cwd })
+    console.log('u ref',JSON.stringify(updateRef));
+    if (updateRef.error || updateRef.stderr) {
+      return emit.reject(
+        'data.add',
+        client,
+        '500',
+        `${
+          updateRef.error ? updateRef.error.toString() : ''
+        }, ${
+          updateRef.stderr ? updateRef.stderr.toString() : ''
+        }, ${
+          updateRef.stdout ? updateRef.stdout.toString() : ''
+        }`,
+      );
+    }
+    emit.resolveWithData('data.add', client, '200', `File ${msg.path} added.`, { id: msg.id });
   } catch (e) {
     emit.reject('data.add', client, '500', `Catched error: ${e}`);
   }
@@ -109,10 +254,20 @@ async function dataDel(client, rawMsg) {
         'data.del',
         client,
         '500',
-        `${error}, ${stderr}, ${stdout}`,
+        `${
+          error ? error.toString() : ''
+        }, ${
+          stderr ? stderr.toString() : ''
+        }, ${
+          stdout ? stdout.toString() : ''
+        }`,
       );
     }
-    emit.resolveWithData('data.del', client, '200', `File ${msg.path} removed, ${stdout}.`, { id: msg.id });
+    emit.resolveWithData(
+      'data.del',
+      client, '200',
+      `File ${msg.path} removed, ${stdout ? stdout.toString() : ''}.`,
+      { id: msg.id });
   } catch (e) {
     emit.reject('data.del', client, '500', `Catched error: ${e}`);
   }
