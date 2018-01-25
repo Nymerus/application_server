@@ -91,7 +91,7 @@ async function dataAdd(client, rawMsg) {
     const repo = await db.repo.findOne({ where: { id: msg.id } });
     // check access to repo ???
     const cwd = `/home/git/repositories/${repo.host}/${msg.id}.git`;
-
+    console.log('uri', cwd);
     const showRef = await prExecFile('git', ['show-ref', '-s', 'master'], { cwd });
     let readTree = {};
     if (showRef.stdout) {
