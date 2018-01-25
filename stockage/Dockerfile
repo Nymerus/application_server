@@ -25,6 +25,7 @@ RUN rm -rf repositories/gitolite-admin.git
 RUN echo 'NoHostAuthenticationForLocalhost yes' >> ~/.ssh/config
 RUN git config --global user.email "nymerus@outlook.com"
 RUN git config --global user.name "nymerus"
+RUN git config --global core.attributesFile "* binary"
 RUN echo "include \"*.conf\"\n$(cat $HOME/.gitolite/conf/gitolite.conf)" > $HOME/.gitolite/conf/gitolite.conf
 EXPOSE 3000
 EXPOSE 22
