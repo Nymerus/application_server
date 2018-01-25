@@ -4,7 +4,7 @@ import { execFile } from 'child_process';
 import { readFile, unlink } from 'fs';
 // src files
 import * as dialogue from '../dialogue';
-// import * as db from '../database';
+import * as db from '../database';
 import * as security from '../security';
 import * as emit from '../emit';
 
@@ -52,7 +52,8 @@ async function dataGet(client: any, rawMsg: any) {
   try {
     const user: User = await security.checkUserType(client.id, 'basic');
     if (!user) return emit.reject('data.get', client, '400', 'Invalid parameters.');
-    const cwd = `/home/git/repositories/${user.id}/${msg.id}.git`;
+    const repo = await db.repo.findOne({ where: { id: msg.id } });
+    const cwd = `/home/git/repositories/${repo.host}/${msg.id}.git`;
     const { error, stdout, stderr } = await prExecFile(
       'git',
       ['archive', '-o', 'latest.zip', 'HEAD'],
@@ -88,8 +89,9 @@ async function dataAdd(client, rawMsg) {
 
   try {
     const user: User = await security.checkUserType(client.id, 'basic');
+    const repo = await db.repo.findOne({ where: { id: msg.id } });
     // check access to repo ???
-    const cwd = `/home/git/repositories/${user.id}/${msg.id}.git`;
+    const cwd = `/home/git/repositories/${repo.host}/${msg.id}.git`;
 
     const showRef = await prExecFile('git', ['show-ref', '-s', 'master'], { cwd });
     let readTree = {};
@@ -248,10 +250,11 @@ async function dataDel(client, rawMsg) {
   try {
     const user: User = await security.checkUserType(client.id, 'basic');
     // check access to repo ???
+    const repo = await db.repo.findOne({ where: { id: msg.id } });
     const { error, stdout, stderr } = await prExecFile(
       '/home/git/data/src/scripts/delFile.sh',
       [msg.path, `User ${user.login} deleted ${msg.path}.`],
-      { cwd: `/home/git/repositories/${user.id}/${msg.id}.git` },
+      { cwd: `/home/git/repositories/${repo.host}/${msg.id}.git` },
     );
     if (error || (stderr && !(stderr.includes('use --empty')))) {
       return emit.reject(
