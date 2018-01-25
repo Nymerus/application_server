@@ -12,16 +12,16 @@ const prExecFile = (url: string, args: any, opt?: any) =>
   new Promise(res =>
     execFile(url, args, opt, (error, stdout, stderr) => res({ error, stdout, stderr })));
 
-const prReadFile = (url) =>
+const prReadFile = url =>
   new Promise(res =>
     readFile(url, (error, data) => res({ error, data })));
 
 const prExecFileStdin = (url: string, args: any, opt?: any, stdin: any) =>
-    new Promise(res => {
-      const c = execFile(url, args, opt, (error, stdout, stderr) => res({ error, stdout, stderr }));
-      c.stdin.write(stdin);
-      c.stdin.end();
-    });
+  new Promise((res) => {
+    const c = execFile(url, args, opt, (error, stdout, stderr) => res({ error, stdout, stderr }));
+    c.stdin.write(stdin);
+    c.stdin.end();
+  });
 
 type Client = {
   emit: (string, any) => any,
@@ -56,16 +56,18 @@ async function dataGet(client: any, rawMsg: any) {
     const { error, stdout, stderr } = await prExecFile(
       'git',
       ['archive', '-o', 'latest.zip', 'HEAD'],
-      { cwd: cwd },
+      { cwd },
     );
-    if (error || stderr) return emit.reject(
-      'data.get',
-      client, '500',
-      `Catched error: ${
-        error ? error.toString() : '' ||
-        stderr ? stderr.toString() : ''
-      }`
-    );
+    if (error || stderr) {
+      return emit.reject(
+        'data.get',
+        client, '500',
+        `Catched error: ${
+          error ? error.toString() : '' ||
+          stderr ? stderr.toString() : ''
+        }`,
+      );
+    }
     if (error || stderr) return emit.reject('data.get', client, '500', `Catched error: ${error || stderr}`);
     const { error: err, data } = await prReadFile(`${cwd}/latest.zip`);
     unlink(`${cwd}/latest.zip`, () => undefined);
@@ -94,31 +96,33 @@ async function dataAdd(client, rawMsg) {
     if (showRef.stdout) {
       readTree = await prExecFile('git', [
         'read-tree',
-        showRef.stdout.toString().replace('\n', '')
+        showRef.stdout.toString().replace('\n', ''),
       ], { cwd });
     } else {
       readTree = await prExecFile('git', ['read-tree', '--empty'], { cwd });
     }
-    console.log('readtree',JSON.stringify(readTree));
-    if (readTree.error) return emit.reject(
-      'data.add',
-      client,
-      '500',
-      `${
-        readTree.error ? readTree.error.toString() : ''
-      }, ${
-        readTree.stderr ? readTree.stderr.toString() : ''
-      }, ${
-        readTree.stdout ? readTree.stdout.toString() : ''
-      }`,
-    );
+    console.log('readtree', JSON.stringify(readTree), msg.path);
+    if (readTree.error) {
+      return emit.reject(
+        'data.add',
+        client,
+        '500',
+        `${
+          readTree.error ? readTree.error.toString() : ''
+        }, ${
+          readTree.stderr ? readTree.stderr.toString() : ''
+        }, ${
+          readTree.stdout ? readTree.stdout.toString() : ''
+        }`,
+      );
+    }
 
     const hashObject = await prExecFileStdin('git', [
       'hash-object',
       '-w',
-      '--stdin'
+      '--stdin',
     ], { cwd }, msg.data);
-    console.log('hash',JSON.stringify(hashObject));
+    console.log('hash', JSON.stringify(hashObject), msg.path);
     if (hashObject.error || hashObject.stderr || !hashObject.stdout) {
       return emit.reject(
         'data.add',
@@ -139,9 +143,9 @@ async function dataAdd(client, rawMsg) {
       '--cacheinfo',
       '644',
       hashObject.stdout.replace('\n', ''),
-      msg.path
+      msg.path,
     ], { cwd });
-    console.log('u index',JSON.stringify(updateIndex));
+    console.log('u index', JSON.stringify(updateIndex), msg.path);
     if (updateIndex.error || updateIndex.stderr) {
       return emit.reject(
         'data.add',
@@ -158,7 +162,7 @@ async function dataAdd(client, rawMsg) {
     }
 
     const writeTree = await prExecFile('git', ['write-tree'], { cwd });
-    console.log('writeTree',JSON.stringify(writeTree));
+    console.log('writeTree', JSON.stringify(writeTree), msg.path);
     if (writeTree.error || writeTree.stderr || !writeTree.stdout) {
       return emit.reject(
         'data.add',
@@ -183,17 +187,17 @@ async function dataAdd(client, rawMsg) {
         '-p',
         showRef.stdout.toString().replace('\n', ''),
         '-m',
-        commitMessage
+        commitMessage,
       ], { cwd });
     } else {
       commitTree = await prExecFile('git', [
         'commit-tree',
         writeTree.stdout.toString().replace('\n', ''),
         '-m',
-        commitMessage
+        commitMessage,
       ], { cwd });
     }
-    console.log('commit',JSON.stringify(commitTree));
+    console.log('commit', JSON.stringify(commitTree), msg.path);
     if (commitTree.error || commitTree.stderr || !commitTree.stdout) {
       return emit.reject(
         'data.add',
@@ -213,9 +217,9 @@ async function dataAdd(client, rawMsg) {
       'update-ref',
       'refs/heads/master',
       commitTree.stdout.toString().replace('\n', ''),
-      showRef.stdout.toString().replace('\n', '')
-    ], { cwd })
-    console.log('u ref',JSON.stringify(updateRef));
+      showRef.stdout.toString().replace('\n', ''),
+    ], { cwd });
+    console.log('u ref', JSON.stringify(updateRef), msg.path);
     if (updateRef.error || updateRef.stderr) {
       return emit.reject(
         'data.add',
@@ -267,7 +271,8 @@ async function dataDel(client, rawMsg) {
       'data.del',
       client, '200',
       `File ${msg.path} removed, ${stdout ? stdout.toString() : ''}.`,
-      { id: msg.id });
+      { id: msg.id },
+    );
   } catch (e) {
     emit.reject('data.del', client, '500', `Catched error: ${e}`);
   }
