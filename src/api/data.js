@@ -19,8 +19,7 @@ const prReadFile = url =>
 const prExecFileStdin = (url: string, args: any, opt?: any, stdin: any) =>
   new Promise((res) => {
     const c = execFile(url, args, opt, (error, stdout, stderr) => res({ error, stdout, stderr }));
-    c.stdin.write(stdin);
-    c.stdin.end();
+    c.stdin.end(stdin, 'binary');
   });
 
 type Client = {
