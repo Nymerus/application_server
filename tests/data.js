@@ -39,7 +39,7 @@ const delFolder = id =>
 
 const delFile = id =>
   new Promise((res) => {
-    socket.emit('data.del', { id, path: 'folder1/toto' });
+    socket.emit('data.del', { id, path: 'folder1/toto.docx' });
     socket.once('data.del', res);
   });
 
