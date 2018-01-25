@@ -1,5 +1,5 @@
 // @flow
-import { appendFile, unlink, access, constants } from 'fs';
+import { appendFile, unlink, access, constants, writeFile } from 'fs';
 import { execFile } from 'child_process';
 
 // src files
@@ -8,6 +8,116 @@ import * as db from '../database';
 import * as security from '../security';
 import * as emit from '../emit';
 
+const attr = "
+# These settings are for any web project
+
+# Handle line endings automatically for files detected as text
+# and leave all files detected as binary untouched.
+# * text=auto
+# NOTE - originally I had the above line un-commented.  it caused me a lot of grief related to line endings because I was dealing with WordPress plugins and the website changing line endings out if a user modified a plugin through the web interface.  commenting this line out seems to have alleviated the git chaos where simply switching to a branch caused it to believe 500 files were modified.
+
+#
+# The above will handle all files NOT found below
+#
+
+#
+## These files are text and should be normalized (Convert crlf => lf)
+#
+
+# source code
+*.php text
+*.css text
+*.sass text
+*.scss text
+*.less text
+*.styl text
+*.js text
+*.coffee text
+*.json text
+*.htm text
+*.html text
+*.xml text
+*.svg text
+*.txt text
+*.ini text
+*.inc text
+*.pl text
+*.rb text
+*.py text
+*.scm text
+*.sql text
+*.sh text
+*.bat text
+
+# templates
+*.ejs text
+*.hbt text
+*.jade text
+*.haml text
+*.hbs text
+*.dot text
+*.tmpl text
+*.phtml text
+
+# server config
+.htaccess text
+
+# git config
+.gitattributes text
+.gitignore text
+.gitconfig text
+
+# code analysis config
+.jshintrc text
+.jscsrc text
+.jshintignore text
+.csslintrc text
+
+# misc config
+*.yaml text
+*.yml text
+.editorconfig text
+
+# build config
+*.npmignore text
+*.bowerrc text
+
+# Heroku
+Procfile text
+.slugignore text
+
+# Documentation
+*.md text
+LICENSE text
+AUTHORS text
+
+
+#
+## These files are binary and should be left untouched
+#
+
+# (binary is a macro for -text -diff)
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.mov binary
+*.mp4 binary
+*.mp3 binary
+*.flv binary
+*.fla binary
+*.swf binary
+*.gz binary
+*.zip binary
+*.7z binary
+*.ttf binary
+*.eot binary
+*.woff binary
+*.pyc binary
+*.pdf binary
+";
+
 const prExecFile = (url, args, opt?) =>
   new Promise(res =>
     execFile(url, args, opt, (error, stdout, stderr) => res({ error, stdout, stderr })));
@@ -15,6 +125,8 @@ const prAppendFile = (url, text) =>
   new Promise(res => appendFile(url, text, error => res({ error })));
 const prUnlink = url => new Promise(res => unlink(url, error => res({ error })));
 const prAccess = (url, mode) => new Promise(res => access(url, mode, error => res({ error })));
+const prWriteFile = (path, data) =>
+  new Promise(res => writeFile(path, data, error => res({ error })));
 
 type Client = {
   emit: (string, any) => any,
@@ -78,8 +190,13 @@ async function create(client, msg) {
     }\n    RW\t=\t${data.id}\n    R\t=\t${data.id}\n\n`;
 
     await prAppendFile(`/home/git/.gitolite/conf/${newRepo.id}.conf`, text);
-    gitoliteUpdate(client, 'repo.create', '500', () =>
-      emit.resolveWithData('repo.create', client, '200', 'repo created', { id: newRepo.id }));
+    gitoliteUpdate(client, 'repo.create', '500', async () => {
+      const wr = await prWriteFile(`/home/git/repositories/${data.id}/${newRepo.id}.git/info/attributes`, attr);
+      if (wr.error) {
+        return emit.reject('repo.create', client, '500', e);
+      }
+      emit.resolveWithData('repo.create', client, '200', 'repo created', { id: newRepo.id });
+    });
   } catch (e) {
     emit.reject('repo.create', client, '500', e);
   }
