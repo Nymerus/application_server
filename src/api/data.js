@@ -92,7 +92,7 @@ async function dataAdd(client, rawMsg) {
     // check access to repo ???
     const cwd = `/home/git/repositories/${repo.host}/${msg.id}.git`;
     console.log('uri', cwd);
-    const showRef = await prExecFile('git', ['show-ref', '-s', 'master'], { cwd });
+    let showRef = await prExecFile('git', ['show-ref', '-s', 'master'], { cwd });
     let readTree = {};
     if (showRef.stdout) {
       readTree = await prExecFile('git', [
@@ -178,6 +178,7 @@ async function dataAdd(client, rawMsg) {
         }`,
       );
     }
+    showRef = await prExecFile('git', ['show-ref', '-s', 'master'], { cwd });
 
     let commitTree = {};
     const commitMessage = `User ${user.login} add ${msg.path}.`;
@@ -213,6 +214,7 @@ async function dataAdd(client, rawMsg) {
         }`,
       );
     }
+    showRef = await prExecFile('git', ['show-ref', '-s', 'master'], { cwd });
 
     const updateRef = await prExecFile('git', [
       'update-ref',
