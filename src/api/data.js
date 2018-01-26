@@ -285,6 +285,7 @@ async function dataDel(client, rawMsg) {
 export default function run(client: Client) {
   client.on('data.get', (msg: any) => dataGet(client, dialogue.convert(msg)));
   client.on('data.add', (msg: msgDataAdd) => {
+    console.log('data.add !!!!!!!!!!!!!!!!', msg);
     dataAdd(client, dialogue.convert(msg));
   });
 
