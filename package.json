@@ -45,11 +45,17 @@
     "device": "./node_modules/.bin/babel-node tests/device.js",
     "logs": "./node_modules/.bin/babel-node tests/logs.js",
     "repo": "./node_modules/.bin/babel-node tests/repo.js",
-    "test:data": "./node_modules/.bin/babel-node tests/data.js"
+    "test:data": "./node_modules/.bin/babel-node tests/data.js",
+    "test:sshkey": "./node_modules/.bin/babel-node tests/sshkey.js"
   },
   "nymerus": {
     "name": "nymerus-test",
     "port": "3000",
-    "address": "http://127.0.0.1"
+    "address": "http://163.5.84.237",
+    "superadmin": {
+      "login": "superadmin",
+      "email": "superadmin@nymerus.com",
+      "password": "test1"
+    }
   }
 }

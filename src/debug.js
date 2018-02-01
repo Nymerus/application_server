@@ -1,6 +1,8 @@
 // node modules
 import Bcrypt from 'bcrypt';
 
+import { nymerus } from '../package.json';
+
 // src files
 import * as dialogue from './dialogue';
 import * as db from './database';
@@ -13,11 +15,12 @@ export function createAdminIfNotExist() {
       .findOne({ where: { type: 'superadmin' } })
       .then((superadmin) => {
         if (!superadmin) {
-          const hashedPassword = Bcrypt.hashSync('test', 10);
+          console.warn(nymerus.superadmin.password);
+          const hashedPassword = Bcrypt.hashSync(nymerus.superadmin.password, 10);
           db.user
             .create({
-              login: 'superadmin',
-              email: 'superadmin@nymerus.com',
+              login: nymerus.superadmin.login,
+              email: nymerus.superadmin.email,
               icon: img.default,
               password: hashedPassword,
               type: 'superadmin',
